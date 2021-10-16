@@ -123,7 +123,7 @@ public static class ImageProcessor
                }
             }
          }
-         Func<int, int, int, int> Clamp = (v, max, min) => {
+         Func<int, int, int, int> Clamp = (v, min, max) => {
             return v > max ? max : (v < min ? min : v);
          };
          int rowColCount = (int)Math.Ceiling(Math.Sqrt(Clamp(Math.Min(smallImageCheckedCount, maxNumberOfSmallImagesPerThumbnail), 0, 16)));
