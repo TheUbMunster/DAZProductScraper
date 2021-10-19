@@ -16,6 +16,12 @@ namespace DAZProductScraperGUI
       {
          InitializeComponent();
          this.AcceptButton = testButton;
+         Application.ApplicationExit += Application_ApplicationExit;
+      }
+
+      private void Application_ApplicationExit(object sender, EventArgs e)
+      {
+         DazQuickviewManager.OnApplicationQuit();
       }
 
       private void testButton_Click(object sender, EventArgs e)

@@ -50,7 +50,7 @@ public static class DazQuickviewManager
 
       public ThumbnailResolution Resolution { get; set; } = ThumbnailResolution.R1080p;
       public int JpgQuality { get; set; } = 75;
-      public string SaveDirectory { get; set; }
+      public string SaveDirectory { get; set; } = "DAZProductScraper_Data";
 
       public static (int width, int height) GetResolution(ThumbnailResolution res)
       {
@@ -179,7 +179,6 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    private static Browser browser;
    private static Page webpage;
    public static CancellationTokenSource programwideCancellation = new CancellationTokenSource();
-   private static string appSaveDir;
 
    public static string email, pass;
 
@@ -191,9 +190,10 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
 
    public static async void Test()
    {
+      System.IO.Directory.CreateDirectory(fetchConfig.SaveDirectory);
       ProductInfoFetch pif = new ProductInfoFetch("49035");
       await pif.FetchData();
-      await ImageProcessor.GenerateImage(pif.imageUrls, appSaveDir + pif.cleanedProductName + ".jpg");
+      await ImageProcessor.GenerateImage(pif.imageUrls, pif.cleanedProductName, 7, 32, 100);
    }
 
    public static void TryLogin()
@@ -222,44 +222,23 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
             break;
          case State.LoginLoaded:
             //waiting
-            //#if UNITY_EDITOR
-            //            ShowPageOnDebugImage();
-            //#endif
             break;
          case State.LoggingIn:
             Login(email, pass, () => ChangeState(State.LoggedIn));
             break;
          case State.LoggedIn:
-            //#if UNITY_EDITOR
-            //            ShowPageOnDebugImage();
-            //#endif
             ChangeState(State.LoadingProductPage);
             break;
          case State.LoadingProductPage:
             GoToProductsPage(() => ChangeState(State.ProductPageLoaded));
             break;
          case State.ProductPageLoaded:
-            //#if UNITY_EDITOR
-            //            ShowPageOnDebugImage();
-            //#endif
             GetProductsIds((List<string> l) =>
             {
                Console.WriteLine("Product Id's fetched");
                GenerateData(l, () => Console.WriteLine("Done!!!"));
-               //GetProductsLinks(() => ChangeState(State.FetchingImages));
             });
             break;
-         //case State.FetchingImages:
-         //   Debug.Log($"Products ({productData.Count()}):\r\n" + string.Join("\r\n", productData));
-         //   GetProductsImageLinks(() => ChangeState(State.ImagesFetched));
-         //   break;
-         //case State.ImagesFetched:
-         //   Debug.Log($"Images:\r\n{string.Join("\r\n", imageUrls.Select(x => x.Key + ": " + string.Join(", ", imageUrls[x.Key])))}");
-         //   foreach (var e in productData)
-         //   {
-         //      screenshotter.AddScreenshotRequest(new Screenshotter.ScreenshotRequest(e.name, imageUrls[e.id]));
-         //   }
-         //   break;
          default:
             throw new InvalidOperationException();
       }
@@ -272,24 +251,11 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    private static async void InitializeBrowser(Action completionCallback)
    {
       BrowserFetcher browserFetch = Puppeteer.CreateBrowserFetcher(new BrowserFetcherOptions() { });
-      //switch (IntPtr.Size * 8) //puppeteersharp for some reason is failing to get the current platform.
-      //{
-      //   case 32:
-      //      break;
-      //   case 64:
-      //      break;
-      //}
-      //Debug.Log(browserFetch.Platform);
-      //Debug.Log("Win?: " + RuntimeInformation.IsOSPlatform(OSPlatform.Windows));
-      //Debug.Log("Linux?: " + RuntimeInformation.IsOSPlatform(OSPlatform.Linux));
-      //Debug.Log("OSX?: " + RuntimeInformation.IsOSPlatform(OSPlatform.OSX));
-      //Debug.Log("Desc: " + RuntimeInformation.OSDescription);
-      //Debug.Log("Arch: " + RuntimeInformation.OSArchitecture);
       RevisionInfo revInfo = await browserFetch.DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
       Browser b = await Puppeteer.LaunchAsync(new LaunchOptions
       {
          Headless =
-#if UNITY_EDITOR
+#if DEBUG
          true//false
 #else
          true
@@ -308,7 +274,9 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    private static async void NavigateToLogin(Action completionCallback)
    {
       webpage = await browser.NewPageAsync();
+#if DEBUG
       await webpage.SetViewportAsync(new ViewPortOptions() { Width = 1920, Height = 1080 });
+#endif
       await webpage.GoToAsync(userLoginUrl);
       completionCallback?.Invoke();
    }
@@ -374,7 +342,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
 
    private static async void GenerateData(List<string> ids, Action completionCallback)
    {
-      System.IO.Directory.CreateDirectory(appSaveDir);
+      System.IO.Directory.CreateDirectory(fetchConfig.SaveDirectory);
       using (SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrencyIO, maxConcurrencyIO))
       {
          List<Task> fetches = new List<Task>();
@@ -395,12 +363,12 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
                   if (fetch.imageUrls != null)
                   {
                      //ssr = new Screenshotter.ScreenshotRequest(fetch.cleanedProductName, fetch.imageUrls);
-                     ImageProcessor.GenerateImage(fetch.imageUrls, appSaveDir + "\\" + fetch.cleanedProductName + ".jpg", 16).Wait();
+                     ImageProcessor.GenerateImage(fetch.imageUrls, fetch.cleanedProductName, 9, 27, 3).Wait();
                   }
                   else
                   {
                      //ssr = new Screenshotter.ScreenshotRequest(fetch.cleanedProductName, fetch.base64Image);
-                     ImageProcessor.GenerateImage(fetch.base64Image, appSaveDir + "\\" + fetch.cleanedProductName + ".jpg").Wait();
+                     ImageProcessor.GenerateImage(fetch.base64Image, fetch.cleanedProductName).Wait();
                   }
                   //ssr.Calculate().Wait(); //1 at a time of the 10
                   //Screenshotter.AddScreenshotRequest(ssr);
@@ -419,160 +387,11 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
       completionCallback?.Invoke();
    }
 
-   /// <summary>
-   /// Gets all of the product page links from the product ids.
-   /// </summary>
-   /// <param name="completionCallback">Called when the links are generated</param>
-   //private async void GetProductsLinks(Action completionCallback = null)
-   //{
-   //   using (SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrencyIO, maxConcurrencyIO))
-   //   {
-   //      //float startTime = Time.time;
-   //      List<Task<(string id, string name, string link)>> fetchProductLinks = new List<Task<(string, string, string)>>();
-   //      const int amountPerSlam = 2000;
-   //      //foreach (string e in productIds)
-   //      for (int i = 0; i < productIds.Count; i += amountPerSlam)
-   //      {
-   //         for (int j = i; j < (i + amountPerSlam < productIds.Count ? i + amountPerSlam : productIds.Count); j++)
-   //         {
-   //            await semaphore.WaitAsync();
-   //            fetchProductLinks.Add(Task.Run<(string id, string name, string link)>(() =>
-   //            {
-   //               WebClient wc = null;
-   //               try
-   //               {
-   //                  //Debug.Log($"Task {Task.CurrentId} waits for semaphore.");
-   //                  //Debug.Log($"Task {Task.CurrentId} enters the semaphore.");
-   //                  wc = new WebClient();
-   //                  string result = wc.DownloadString(GetJsonProductInfoUrl(productIds[j])); //was await
-   //                  JObject json = JObject.Parse(result);
-   //                  Debug.Log("GetProductLinks completed one fetch.");
-   //                  return (productIds[j], json["name"].ToString(), domain + json["url"].ToString());
-   //               }
-   //               catch
-   //               {
-   //                  //forseen errors:
-   //                  //wc.DownloadStringTaskAsync was passed null
-   //                  //wc.DownloadStringTaskAsync was passed a bad url
-   //                  //wc.DownloadStringTaskAsync had an error occur while downloading
-   //                  //JObject.Parse had a bad parse.
-   //                  //json["name"] or json["url"] were bad.
-   //                  //Something with semaphore
-   //                  return (productIds[j], null, null);
-   //               }
-   //               finally
-   //               {
-   //                  wc?.Dispose();
-   //                  semaphore.Release();
-   //                  //Debug.Log($"Task {Task.CurrentId} releases the semaphore, prev: {}");
-   //               }
-   //            }));
-   //         }
-   //         Debug.Log("Giving the server a break...");
-   //         await Task.Delay(1000 * 120);
-   //      }
-   //      productData = await Task.WhenAll(fetchProductLinks);
-   //      //Debug.Log("total time: " + (Time.time - startTime));
-   //   }
-   //   completionCallback?.Invoke();
-   //}
-
-   /// <summary>
-   /// Gets the links of the images for all of the products.
-   /// </summary>
-   /// <param name="completionCallback">Called when all of the product images have been fetched</param>
-   //private async void GetProductsImageLinks(Action completionCallback = null)
-   //{
-   //   //imageUrls;
-   //   using (SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrencyIO, maxConcurrencyIO))
-   //   {
-   //      List<Task<(string, List<string>)>> fetchProductImages = new List<Task<(string, List<string>)>>();
-   //      //foreach ((string id, string name, string link) e in productData)
-   //      const int amountPerSlam = 2000;
-   //      for (int i = 0; i < productData.Length; i += amountPerSlam)
-   //      {
-   //         //(j < i + amountPerSlam) && (i + j < productData.Length)
-   //         for (int j = i; j < (i + amountPerSlam < productData.Length ? i + amountPerSlam : productData.Length); j++)
-   //         {
-   //            await semaphore.WaitAsync();
-   //            fetchProductImages.Add(Task.Run<(string, List<string>)>(() =>
-   //            {
-   //               WebClient wc = null;
-   //               try
-   //               {
-   //                  wc = new WebClient();
-   //                  HtmlDocument doc = new HtmlDocument();
-   //                  doc.LoadHtml(wc.DownloadString(productData[j].link));
-   //                  List<string> result = doc.DocumentNode.SelectNodes("//img[@class=\"zoomable\"]").Select(x => x.GetAttributeValue("data-fancybox-href", null))?.ToList();
-   //                  return (productData[j].id, result ?? new List<string>());
-   //               }
-   //               catch
-   //               {
-   //                  //probably a 404 because this particular product is one of daz's "daz studio win64 installer" product or something.
-   //                  //no images because this product doesn't have a regular product page.
-   //                  return (productData[j].id, new List<string>());
-   //               }
-   //               finally
-   //               {
-   //                  wc?.Dispose();
-   //                  semaphore.Release();
-   //               }
-   //            }));
-   //         }
-   //         Debug.Log("Giving the server a break...");
-   //         await Task.Delay(1000 * 120);
-   //      }
-   //      await Task.WhenAll(fetchProductImages);
-   //   }
-   //   completionCallback?.Invoke();
-   //}
-
-   /// <summary>
-   /// Given an id, returns the url to fetch the json object of the object info.
-   /// </summary>
-   //private static string GetJsonProductInfoUrl(string id) => productInfoApiUrl + id;
-
-   /// <summary>
-   /// Gets the url for the Daz login page.
-   /// </summary>
-   //private static string GetLoginUrl() => userLoginUrl;
-
-   /// <summary>
-   /// Gets the url for the user's product page.
-   /// </summary>
-   //private static string GetUserProductPageUrl() => userProductPageUrl;
-
-   #region QOL
-   //#if UNITY_EDITOR
-   //   //redo this so it doesn't pause the UI thread.
-   //   private void ShowPageOnDebugImage()
-   //   {
-   //      if (webpage != null)
-   //      {
-   //         string path = null;
-   //         path ??= Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory) + "\\temp.png";
-   //         webpage.ScreenshotAsync(path, new ScreenshotOptions() { Type = ScreenshotType.Png }).Wait();
-   //#pragma warning disable CS0618
-   //         WWW img = new WWW(path);
-   //#pragma warning restore CS0618
-   //         while (!img.isDone)
-   //         {
-   //            Thread.Sleep(50);
-   //         }
-   //         debugImage.sprite = Sprite.Create(img.textureNonReadable, new Rect(0, 0, img.textureNonReadable.width, img.textureNonReadable.height), new Vector2(0, 0));
-   //      }
-   //      else
-   //      {
-   //         Debug.LogWarning("The webpage hasn't been loaded yet, can't take screenshot.");
-   //      }
-   //   }
-   //#endif
-   #endregion
-
    public static void OnApplicationQuit()
    {
       webpage?.Dispose();
       browser?.Dispose();
       programwideCancellation.Cancel();
+      programwideCancellation.Dispose();
    }
 }
