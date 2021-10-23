@@ -182,9 +182,10 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
 
    public static string email, pass;
 
-   private static void Start()
+   public static void Start()
    {
       //Test();
+      System.IO.Directory.CreateDirectory(fetchConfig.SaveDirectory);
       ChangeState(State.LoadingBrowser);
    }
 
@@ -193,7 +194,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
       System.IO.Directory.CreateDirectory(fetchConfig.SaveDirectory);
       ProductInfoFetch pif = new ProductInfoFetch("49035");
       await pif.FetchData();
-      await ImageProcessor.GenerateImage(pif.imageUrls, pif.cleanedProductName, 7, 32, 100);
+      await ImageProcessor.GenerateImage(pif.imageUrls, pif.cleanedProductName, 2, 32, 100);
    }
 
    public static void TryLogin()
@@ -363,7 +364,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
                   if (fetch.imageUrls != null)
                   {
                      //ssr = new Screenshotter.ScreenshotRequest(fetch.cleanedProductName, fetch.imageUrls);
-                     ImageProcessor.GenerateImage(fetch.imageUrls, fetch.cleanedProductName, 9, 27, 3).Wait();
+                     ImageProcessor.GenerateImage(fetch.imageUrls, fetch.cleanedProductName, 9, 100, 3).Wait();
                   }
                   else
                   {

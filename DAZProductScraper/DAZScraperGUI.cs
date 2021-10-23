@@ -17,6 +17,7 @@ namespace DAZProductScraperGUI
          InitializeComponent();
          this.AcceptButton = testButton;
          Application.ApplicationExit += Application_ApplicationExit;
+         DazQuickviewManager.Start();
       }
 
       private void Application_ApplicationExit(object sender, EventArgs e)
@@ -28,7 +29,8 @@ namespace DAZProductScraperGUI
       {
          DazQuickviewManager.email = emailTextBox.Text;
          DazQuickviewManager.pass = passTextBox.Text;
-         DazQuickviewManager.Test();
+         //DazQuickviewManager.Test();
+         DazQuickviewManager.TryLogin();
       }
    }
 }

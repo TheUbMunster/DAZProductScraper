@@ -234,17 +234,17 @@ public static class ImageProcessor
          int mwMiniImageWidth = (int)((double)mwMiniImageHeight * (10d / 13d));
          bool mwFit = mwMiniImageWidth * rowColCount <= unusedWidthPX; //does it fit in the unused width?
 
-         int miniImageWidth;
-         int miniImageHeight;
+         int miniMaxImageWidth;
+         int miniMaxImageHeight;
          if (mhFit) //pick the correct dimensions. (one of the two should always fit).
          {
-            miniImageWidth = mhMiniImageWidth;
-            miniImageHeight = mhMiniImageHeight;
+            miniMaxImageWidth = mhMiniImageWidth;
+            miniMaxImageHeight = mhMiniImageHeight;
          }
          else if (mwFit)
          {
-            miniImageWidth = mwMiniImageWidth;
-            miniImageHeight = mwMiniImageHeight;
+            miniMaxImageWidth = mwMiniImageWidth;
+            miniMaxImageHeight = mwMiniImageHeight;
          }
          else
          {
@@ -267,7 +267,7 @@ public static class ImageProcessor
          {
             x.Mutate(o =>
             {
-               o.Resize(miniImageWidth, miniImageHeight, KnownResamplers.Triangle); //TODO: hit this loop with the 1-2 multithread semaphore combo?
+               o.Resize(miniMaxImageWidth, miniMaxImageHeight, KnownResamplers.Triangle); //TODO: hit this loop with the 1-2 multithread semaphore combo?
             });
          });
 
@@ -278,7 +278,7 @@ public static class ImageProcessor
          #endregion
 
          //put the images in the result image.
-         int rootLeftMainImage = (resultDimensions.width - (((int)(resultDimensions.height * (10d / 13d))) + (rowColCount * miniImageWidth))) / 2;
+         int rootLeftMainImage = (resultDimensions.width - (((int)(resultDimensions.height * (10d / 13d))) + (rowColCount * miniMaxImageWidth))) / 2;
          int rootLeftMiniImages = (rootLeftMainImage + ((int)(resultDimensions.height * (10d / 13d))));
 
          List<Image<Rgb24>> resultImages = new List<Image<Rgb24>>();
@@ -313,7 +313,7 @@ public static class ImageProcessor
                   int y = (pi - x) / rowColCount;
                   if (miniImages[si] != null)
                   {
-                     o.DrawImage(miniImages[si], new Point(rootLeftMiniImages + (x * miniImageWidth), y * miniImageHeight), 1f);
+                     o.DrawImage(miniImages[si], new Point(rootLeftMiniImages + (x * miniMaxImageWidth), y * miniMaxImageHeight), 1f);
                   }
                }
             });
