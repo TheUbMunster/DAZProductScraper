@@ -87,7 +87,7 @@ public static class DazQuickviewManager
          productID = ID;
       }
 
-      public async Task FetchData()
+      public async Task FetchData() //sometimes throws 404 exception?
       {
          WebClient wc = null;
          try
