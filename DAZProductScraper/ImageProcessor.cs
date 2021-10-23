@@ -106,20 +106,20 @@ public static class ImageProcessor
             {
                string url = imageUrls[i];
                await semaphore.WaitAsync();
-               dataFetches.Add(Task.Factory.StartNew(() =>
+               dataFetches.Add(Task.Run(async () =>
                {
                   WebClient wc = null;
                   try
                   {
                      wc = new WebClient();
                      //return await wc.DownloadDataTaskAsync(imageUrls[i]); //this task thread leaves and (probably) another gets spun up to deal with the after await part.
-                     byte[] result = wc.DownloadData(url);
+                     byte[] result = (await wc.DownloadDataTaskAsync(url));
                      //the data *should* be good.
                      return result;
                   }
                   catch
                   {
-                     return null;
+                     return (byte[])null;
                   }
                   finally
                   {
@@ -200,7 +200,7 @@ public static class ImageProcessor
                   using (MemoryStream ms = new MemoryStream())
                   {
                      mainImage.Save(ms, new JpegEncoder() { Quality = DazQuickviewManager.fetchConfig.JpgQuality });
-                     FileStream fs = File.Create(fetchConfig.SaveDirectory + "\\0-" + fileName + ".jpg");
+                     FileStream fs = File.Create(fetchConfig.SaveDirectory + "\\" + fileName + "-0.jpg");
                      ms.Seek(0, SeekOrigin.Begin);
                      ms.CopyTo(fs);
                      fs.Dispose();
@@ -342,7 +342,7 @@ public static class ImageProcessor
             using (MemoryStream ms = new MemoryStream())
             {
                resultImages[i].Save(ms, new JpegEncoder() { Quality = DazQuickviewManager.fetchConfig.JpgQuality });
-               FileStream fs = File.Create(fetchConfig.SaveDirectory + $"\\{i}-" + fileName + ".jpg");
+               FileStream fs = File.Create(fetchConfig.SaveDirectory + "\\" + fileName + $"-{i}.jpg");
                ms.Seek(0, SeekOrigin.Begin);
                ms.CopyTo(fs);
                fs.Dispose();
@@ -377,7 +377,7 @@ public static class ImageProcessor
          x.Antialias = false;
       });
       (int width, int height) resultDimensions = DazQuickviewManager.FetchConfig.GetResolution(DazQuickviewManager.fetchConfig.Resolution);
-      await Task.Run(() =>
+      await Task.Run(() => //this just runs synchronously but wastefully spawns another thread
       {
          using (Image<Rgb24> image = Image.Load<Rgb24>(config, imageData))
          {
@@ -390,7 +390,7 @@ public static class ImageProcessor
             using (MemoryStream ms = new MemoryStream())
             {
                image.Save(ms, new JpegEncoder() { Quality = DazQuickviewManager.fetchConfig.JpgQuality });
-               using (FileStream fs = File.Create(fetchConfig.SaveDirectory + $"\\0-" + fileName + ".jpg"))
+               using (FileStream fs = File.Create(fetchConfig.SaveDirectory + $"\\" + fileName + "-0.jpg"))
                {
                   ms.Seek(0, SeekOrigin.Begin);
                   ms.CopyTo(fs);

@@ -355,21 +355,25 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
             {
                await semaphore.WaitAsync(); //10 at a time
                string id = ids[j]; //closeure not capturing the right index? (don't put this inside the startnew task it's bad).
-               fetches.Add(Task.Factory.StartNew(() =>
+               fetches.Add(Task.Factory.StartNew(async () =>
                {
                   ProductInfoFetch fetch = new ProductInfoFetch(id);
-                  fetch.FetchData().Wait();
+                  await fetch.FetchData();
                   //Screenshotter.ScreenshotRequest ssr;
                   Console.WriteLine("Starting one image...");
                   if (fetch.imageUrls != null)
                   {
                      //ssr = new Screenshotter.ScreenshotRequest(fetch.cleanedProductName, fetch.imageUrls);
-                     ImageProcessor.GenerateImage(fetch.imageUrls, fetch.cleanedProductName, 9, 100, 3).Wait();
+                     await ImageProcessor.GenerateImage(fetch.imageUrls, fetch.cleanedProductName, 9, 100, 3);
+                  }
+                  else if (fetch.base64Image != null)
+                  {
+                     //ssr = new Screenshotter.ScreenshotRequest(fetch.cleanedProductName, fetch.base64Image);
+                     await ImageProcessor.GenerateImage(fetch.base64Image, fetch.cleanedProductName);
                   }
                   else
                   {
-                     //ssr = new Screenshotter.ScreenshotRequest(fetch.cleanedProductName, fetch.base64Image);
-                     ImageProcessor.GenerateImage(fetch.base64Image, fetch.cleanedProductName).Wait();
+                     Console.WriteLine($"Couldn't find any image data for {fetch.productID + " : " + fetch.cleanedProductName}");
                   }
                   //ssr.Calculate().Wait(); //1 at a time of the 10
                   //Screenshotter.AddScreenshotRequest(ssr);
@@ -384,6 +388,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
             await Task.Delay(1000 * 90);
          }
          await Task.WhenAll(fetches);
+         fetches.ForEach(x => x.Dispose());
       }
       completionCallback?.Invoke();
    }
