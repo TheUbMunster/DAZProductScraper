@@ -189,6 +189,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
       ChangeState(State.LoadingBrowser);
    }
 
+#if DEBUG
    public static async void Test()
    {
       System.IO.Directory.CreateDirectory(fetchConfig.SaveDirectory);
@@ -196,6 +197,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
       await pif.FetchData();
       await ImageProcessor.GenerateImage(pif.imageUrls, pif.cleanedProductName, 2, 32, 100);
    }
+#endif
 
    public static void TryLogin()
    {
@@ -341,6 +343,11 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
       }).Distinct()));
    }
 
+   /// <summary>
+   /// Generates the images and such based off the provided product ids.
+   /// </summary>
+   /// <param name="ids">The product ids to generate the data for</param>
+   /// <param name="completionCallback">Called when all the data has been generated.</param>
    private static async void GenerateData(List<string> ids, Action completionCallback)
    {
       System.IO.Directory.CreateDirectory(fetchConfig.SaveDirectory);
@@ -355,7 +362,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
             {
                await semaphore.WaitAsync(); //10 at a time
                string id = ids[j]; //closeure not capturing the right index? (don't put this inside the startnew task it's bad).
-               fetches.Add(Task.Factory.StartNew(async () =>
+               fetches.Add(Task.Run(async () =>
                {
                   ProductInfoFetch fetch = new ProductInfoFetch(id);
                   await fetch.FetchData();

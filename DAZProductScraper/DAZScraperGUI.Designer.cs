@@ -40,9 +40,9 @@ namespace DAZProductScraperGUI
          // 
          this.testButton.Location = new System.Drawing.Point(12, 64);
          this.testButton.Name = "testButton";
-         this.testButton.Size = new System.Drawing.Size(75, 23);
+         this.testButton.Size = new System.Drawing.Size(110, 23);
          this.testButton.TabIndex = 2;
-         this.testButton.Text = "Test";
+         this.testButton.Text = "Login and Generate";
          this.testButton.UseVisualStyleBackColor = true;
          this.testButton.Click += new System.EventHandler(this.testButton_Click);
          // 
