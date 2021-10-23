@@ -373,7 +373,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
                   }
                   else
                   {
-                     Console.WriteLine($"Couldn't find any image data for {fetch.productID + " : " + fetch.cleanedProductName}");
+                     Console.WriteLine($"Couldn't find any image data for {fetch.productID + " : " + fetch.cleanedProductName ?? "no product name found"}");
                   }
                   //ssr.Calculate().Wait(); //1 at a time of the 10
                   //Screenshotter.AddScreenshotRequest(ssr);
