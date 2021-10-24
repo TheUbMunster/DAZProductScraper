@@ -12,6 +12,7 @@ namespace DAZProductScraperGUI
 {
    public partial class DAZScraperGUI : Form
    {
+      private bool started = false;
       public DAZScraperGUI()
       {
          InitializeComponent();
@@ -30,7 +31,14 @@ namespace DAZProductScraperGUI
          DazQuickviewManager.email = emailTextBox.Text;
          DazQuickviewManager.pass = passTextBox.Text;
          //DazQuickviewManager.Test();
+         started = true;
          DazQuickviewManager.TryLogin();
+      }
+
+      private void comboBox1_SelectedIndexChanged(object sender, EventArgs e)
+      {
+         if (!started)
+            DazQuickviewManager.fetchConfig.Resolution = (DazQuickviewManager.FetchConfig.ThumbnailResolution)resolutionSelectComboBox.SelectedIndex;
       }
    }
 }

@@ -41,7 +41,7 @@ public static class DazQuickviewManager
    {
       public enum ThumbnailResolution
       {
-         R480p,
+         R480p = 0,
          R720p,
          R1080p,
          R1440p,

@@ -214,9 +214,9 @@ public static class ImageProcessor
          };
          int rowColCount = (int)Math.Ceiling(Math.Sqrt(Clamp(Math.Min(miniImages.Count, maxNumberOfSmallImagesPerThumbnail), 0, 16))); //should never be 0
 
-         int maxMainWidth, maxMainHeight;
-         maxMainHeight = resultDimensions.height;
-         maxMainWidth = (int)((10d / 13d) * (double)maxMainHeight);
+         //int maxMainWidth, maxMainHeight;
+         //maxMainHeight = resultDimensions.height;
+         //maxMainWidth = (int)((10d / 13d) * (double)maxMainHeight);
 
          int maxSubWidth, maxSubHeight;
          maxSubWidth = maxSubHeight = (int)((double)resultDimensions.height / (double)rowColCount);
@@ -233,7 +233,8 @@ public static class ImageProcessor
             ResizeOptions resizeOpt = new ResizeOptions()
             {
                Mode = ResizeMode.Max,
-               Size = new Size(maxMainWidth, maxMainHeight),
+               //Size = new Size(maxMainWidth, maxMainHeight),
+               Size = new Size(int.MaxValue, resultDimensions.height),
                Sampler = KnownResamplers.Triangle
             };
             x.Resize(resizeOpt);
@@ -260,9 +261,12 @@ public static class ImageProcessor
          #endregion
 
          //put the images in the result image.
-         int rootLeftMainImage = (int)(((double)resultDimensions.width - ((double)(rowColCount * maxSubWidth) + (double)maxMainWidth)) / 2d);
-         int rootLeftSubImages = rootLeftMainImage + maxMainWidth;
-         int rootTopMainImage = (int)((resultDimensions.height - (mainImage?.Height) ?? 0) / 2d);
+         //int rootLeftMainImage = (int)(((double)resultDimensions.width - ((double)(rowColCount * maxSubWidth) + (double)maxMainWidth)) / 2d);
+         int rootLeftMainImage = 0;
+         //int rootLeftSubImages = rootLeftMainImage + maxMainWidth;
+         int rootLeftSubImages = resultDimensions.width - (rowColCount * maxSubWidth);
+         //int rootTopMainImage = (int)((resultDimensions.height - (mainImage?.Height) ?? 0) / 2d);
+         int rootTopMainImage = 0;
 
          List<Image<Rgb24>> resultImages = new List<Image<Rgb24>>();
          int numberOfImages = (int)Math.Ceiling((double)miniImages.Count / (double)maxNumberOfSmallImagesPerThumbnail);

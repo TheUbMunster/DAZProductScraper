@@ -34,6 +34,7 @@ namespace DAZProductScraperGUI
          this.passTextBox = new System.Windows.Forms.TextBox();
          this.emailLabel = new System.Windows.Forms.Label();
          this.passLabel = new System.Windows.Forms.Label();
+         this.resolutionSelectComboBox = new System.Windows.Forms.ComboBox();
          this.SuspendLayout();
          // 
          // testButton
@@ -83,11 +84,30 @@ namespace DAZProductScraperGUI
          this.passLabel.TabIndex = 4;
          this.passLabel.Text = "Pass:";
          // 
+         // resolutionSelectComboBox
+         // 
+         this.resolutionSelectComboBox.Anchor = ((System.Windows.Forms.AnchorStyles)(((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+         this.resolutionSelectComboBox.FormattingEnabled = true;
+         this.resolutionSelectComboBox.Items.AddRange(new object[] {
+            "480p",
+            "720p",
+            "1080p",
+            "1440p",
+            "4k"});
+         this.resolutionSelectComboBox.Location = new System.Drawing.Point(128, 64);
+         this.resolutionSelectComboBox.Name = "resolutionSelectComboBox";
+         this.resolutionSelectComboBox.Size = new System.Drawing.Size(660, 21);
+         this.resolutionSelectComboBox.TabIndex = 5;
+         this.resolutionSelectComboBox.Text = "Select a resolution...";
+         this.resolutionSelectComboBox.SelectedIndexChanged += new System.EventHandler(this.comboBox1_SelectedIndexChanged);
+         // 
          // DAZScraperGUI
          // 
          this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
          this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
          this.ClientSize = new System.Drawing.Size(800, 450);
+         this.Controls.Add(this.resolutionSelectComboBox);
          this.Controls.Add(this.passLabel);
          this.Controls.Add(this.emailLabel);
          this.Controls.Add(this.passTextBox);
@@ -107,6 +127,7 @@ namespace DAZProductScraperGUI
       private System.Windows.Forms.TextBox passTextBox;
       private System.Windows.Forms.Label emailLabel;
       private System.Windows.Forms.Label passLabel;
+      private System.Windows.Forms.ComboBox resolutionSelectComboBox;
    }
 }
 
