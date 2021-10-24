@@ -227,20 +227,26 @@ public static class ImageProcessor
          System.Diagnostics.Stopwatch str = new System.Diagnostics.Stopwatch();
          str.Start();
 #endif
-         ResizeOptions resizeOpt = new ResizeOptions()
-         {
-            Mode = ResizeMode.Max,
-            Size = new Size(maxMainWidth, maxMainHeight),
-            Sampler = KnownResamplers.Triangle
-         };
          //size the big images up.
          mainImage?.Mutate(x =>
-         {  
+         {
+            ResizeOptions resizeOpt = new ResizeOptions()
+            {
+               Mode = ResizeMode.Max,
+               Size = new Size(maxMainWidth, maxMainHeight),
+               Sampler = KnownResamplers.Triangle
+            };
             x.Resize(resizeOpt);
          });
          //size the mini images down.
          miniImages.ForEach(x =>
          {
+            ResizeOptions resizeOpt = new ResizeOptions()
+            {
+               Mode = ResizeMode.Max,
+               Size = new Size(maxSubWidth, maxSubWidth),
+               Sampler = KnownResamplers.Triangle
+            };
             x.Mutate(o =>
             {
                o.Resize(resizeOpt);
