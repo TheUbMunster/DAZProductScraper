@@ -7,8 +7,8 @@
     <ProjectGuid>{34082DD5-5BA0-4D5D-852A-F602C5AE53CD}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>DataFetcher</RootNamespace>
-    <AssemblyName>DataFetcher</AssemblyName>
+    <RootNamespace>DAZProductScraper</RootNamespace>
+    <AssemblyName>DAZProductScraper</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
