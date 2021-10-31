@@ -193,7 +193,7 @@ public static class ImageProcessor
                   using (MemoryStream ms = new MemoryStream())
                   {
                      mainImage.Save(ms, new JpegEncoder() { Quality = DazQuickviewManager.fetchConfig.JpgQuality });
-                     using (FileStream fs = File.Create(fetchConfig.RootSaveDirectory + "\\" + fileName + "-0.jpg"))
+                     using (FileStream fs = File.Create(FetchConfig.GetLibrarySaveDirectory() + $"\\{fileName}-0.jpg"))
                      {
                         ms.Seek(0, SeekOrigin.Begin);
                         ms.CopyTo(fs);
@@ -333,7 +333,7 @@ public static class ImageProcessor
             using (MemoryStream ms = new MemoryStream())
             {
                resultImages[i].Save(ms, new JpegEncoder() { Quality = DazQuickviewManager.fetchConfig.JpgQuality });
-               using (FileStream fs = File.Create(fetchConfig.RootSaveDirectory + "\\" + fileName + $"-{i}.jpg"))
+               using (FileStream fs = File.Create(FetchConfig.GetLibrarySaveDirectory() + $"\\{fileName}-{i}.jpg"))
                {
                   ms.Seek(0, SeekOrigin.Begin);
                   ms.CopyTo(fs);
@@ -376,7 +376,7 @@ public static class ImageProcessor
             o.Resize(new Size((int)(resultDim.height * (10f / 13f)), resultDim.height));
             o.Pad(resultDim.width, resultDim.height, Color.Black);
          });
-         image.SaveAsJpeg(fetchConfig.RootSaveDirectory + "\\" + fileName + "-0.jpg", 
+         image.SaveAsJpeg(FetchConfig.GetLibrarySaveDirectory() + $"\\{fileName}-0.jpg", 
             new JpegEncoder() { Quality = DazQuickviewManager.fetchConfig.JpgQuality });
       }
    }
