@@ -13,6 +13,7 @@ using System.Net;
 using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
+using System.IO;
 
 public static class DazQuickviewManager
 {
@@ -48,10 +49,15 @@ public static class DazQuickviewManager
          R2160p
       }
 
+      private const string RootSaveDirectory = "DAZProductScraper_Data";
+      private const string LibrarySaveDirectory = "Data_Library";
+
       public ThumbnailResolution Resolution { get; set; } = ThumbnailResolution.R1080p;
       public int JpgQuality { get; set; } = 75;
-      public string SaveDirectory { get; set; } = "DAZProductScraper_Data";
+      public int ImageSaveConcurrency { get; set; } = 1;
+      public int ImageFetchConcurrency { get; set; } = 2;
 
+      #region Static Helpers
       public static (int width, int height) GetResolution(ThumbnailResolution res)
       {
          switch (res)
@@ -70,6 +76,17 @@ public static class DazQuickviewManager
                throw new ArgumentException($"The value {res} is not a valid resolution. Make sure to only pass values defined in the enum.");
          }
       }
+
+      public static string GetRootFilePath()
+      {
+         return Path.GetFullPath(RootSaveDirectory);
+      }
+
+      public static string GetLibrarySaveDirectory()
+      {
+         return Path.GetFullPath(LibrarySaveDirectory);
+      }
+      #endregion
    }
 
    public class ProductInfoFetch
@@ -185,18 +202,18 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    public static void Start()
    {
       //Test();
-      System.IO.Directory.CreateDirectory(fetchConfig.SaveDirectory);
+      System.IO.Directory.CreateDirectory(FetchConfig.GetRootFilePath());
       ChangeState(State.LoadingBrowser);
    }
 
 #if DEBUG
-   public static async void Test()
-   {
-      System.IO.Directory.CreateDirectory(fetchConfig.SaveDirectory);
-      ProductInfoFetch pif = new ProductInfoFetch("49035");
-      await pif.FetchData();
-      await ImageProcessor.GenerateImage(pif.imageUrls, pif.cleanedProductName, 2, 32, 100);
-   }
+   //public static async void Test()
+   //{
+   //   System.IO.Directory.CreateDirectory(fetchConfig.RootSaveDirectory);
+   //   ProductInfoFetch pif = new ProductInfoFetch("49035");
+   //   await pif.FetchData();
+   //   await ImageProcessor.GenerateImage(pif.imageUrls, pif.cleanedProductName, 2, 32, 100);
+   //}
 #endif
 
    public static void TryLogin()
@@ -350,7 +367,6 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    /// <param name="completionCallback">Called when all the data has been generated.</param>
    private static async void GenerateData(List<string> ids, Action completionCallback)
    {
-      System.IO.Directory.CreateDirectory(fetchConfig.SaveDirectory);
       using (SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrencyIO, maxConcurrencyIO))
       {
          List<Task> fetches = new List<Task>();

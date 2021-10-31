@@ -193,7 +193,7 @@ public static class ImageProcessor
                   using (MemoryStream ms = new MemoryStream())
                   {
                      mainImage.Save(ms, new JpegEncoder() { Quality = DazQuickviewManager.fetchConfig.JpgQuality });
-                     using (FileStream fs = File.Create(fetchConfig.SaveDirectory + "\\" + fileName + "-0.jpg"))
+                     using (FileStream fs = File.Create(fetchConfig.RootSaveDirectory + "\\" + fileName + "-0.jpg"))
                      {
                         ms.Seek(0, SeekOrigin.Begin);
                         ms.CopyTo(fs);
@@ -333,7 +333,7 @@ public static class ImageProcessor
             using (MemoryStream ms = new MemoryStream())
             {
                resultImages[i].Save(ms, new JpegEncoder() { Quality = DazQuickviewManager.fetchConfig.JpgQuality });
-               using (FileStream fs = File.Create(fetchConfig.SaveDirectory + "\\" + fileName + $"-{i}.jpg"))
+               using (FileStream fs = File.Create(fetchConfig.RootSaveDirectory + "\\" + fileName + $"-{i}.jpg"))
                {
                   ms.Seek(0, SeekOrigin.Begin);
                   ms.CopyTo(fs);
@@ -368,25 +368,16 @@ public static class ImageProcessor
       {
          x.Antialias = false;
       });
-      (int width, int height) resultDimensions = DazQuickviewManager.FetchConfig.GetResolution(DazQuickviewManager.fetchConfig.Resolution);
+      (int width, int height) resultDim = DazQuickviewManager.FetchConfig.GetResolution(DazQuickviewManager.fetchConfig.Resolution);
       using (Image<Rgb24> image = Image.Load<Rgb24>(config, imageData))
       {
          image.Mutate(o =>
          {
-            o.Resize(new Size((int)(resultDimensions.height * (10f / 13f)), resultDimensions.height));
-            o.Pad(resultDimensions.width, resultDimensions.height, Color.Black);
+            o.Resize(new Size((int)(resultDim.height * (10f / 13f)), resultDim.height));
+            o.Pad(resultDim.width, resultDim.height, Color.Black);
          });
-
-         using (MemoryStream ms = new MemoryStream())
-         {
-            image.Save(ms, new JpegEncoder() { Quality = DazQuickviewManager.fetchConfig.JpgQuality });
-            using (FileStream fs = File.Create(fetchConfig.SaveDirectory + $"\\" + fileName + "-0.jpg"))
-            {
-               ms.Seek(0, SeekOrigin.Begin);
-               ms.CopyTo(fs);
-               await fs.FlushAsync();
-            }
-         }
+         image.SaveAsJpeg(fetchConfig.RootSaveDirectory + "\\" + fileName + "-0.jpg", 
+            new JpegEncoder() { Quality = DazQuickviewManager.fetchConfig.JpgQuality });
       }
    }
 }
