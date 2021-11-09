@@ -29,13 +29,25 @@ namespace DAZProductScraper
       /// </summary>
       private void InitializeComponent()
       {
+         this.openRootFolderButton = new System.Windows.Forms.Button();
          this.SuspendLayout();
+         // 
+         // openRootFolderButton
+         // 
+         this.openRootFolderButton.Location = new System.Drawing.Point(394, 172);
+         this.openRootFolderButton.Name = "openRootFolderButton";
+         this.openRootFolderButton.Size = new System.Drawing.Size(215, 23);
+         this.openRootFolderButton.TabIndex = 0;
+         this.openRootFolderButton.Text = "Open Root Folder";
+         this.openRootFolderButton.UseVisualStyleBackColor = true;
+         this.openRootFolderButton.Click += new System.EventHandler(this.openRootFolderButton_Click);
          // 
          // DAZScraperGUI
          // 
          this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
          this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
          this.ClientSize = new System.Drawing.Size(800, 450);
+         this.Controls.Add(this.openRootFolderButton);
          this.Name = "DAZScraperGUI";
          this.Text = "DAZ Product Scraper";
          this.Shown += new System.EventHandler(this.DAZScraperGUI_Shown);
@@ -44,6 +56,8 @@ namespace DAZProductScraper
       }
 
       #endregion
+
+      private System.Windows.Forms.Button openRootFolderButton;
    }
 }
 

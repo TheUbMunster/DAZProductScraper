@@ -33,10 +33,9 @@ namespace DAZProductScraper
          this.passLabel = new System.Windows.Forms.Label();
          this.emailTextBox = new System.Windows.Forms.TextBox();
          this.passTextBox = new System.Windows.Forms.TextBox();
-         this.retainLoginInfo = new System.Windows.Forms.CheckBox();
          this.loginButton = new System.Windows.Forms.Button();
-         this.infoLogRT = new System.Windows.Forms.RichTextBox();
          this.revealPasswordButton = new System.Windows.Forms.Button();
+         this.infoLogRT = new System.Windows.Forms.RichTextBox();
          this.SuspendLayout();
          // 
          // emailLabel
@@ -82,39 +81,18 @@ namespace DAZProductScraper
          this.passTextBox.TabIndex = 1;
          this.passTextBox.UseSystemPasswordChar = true;
          // 
-         // retainLoginInfo
-         // 
-         this.retainLoginInfo.AutoSize = true;
-         this.retainLoginInfo.Checked = true;
-         this.retainLoginInfo.CheckState = System.Windows.Forms.CheckState.Checked;
-         this.retainLoginInfo.Location = new System.Drawing.Point(12, 66);
-         this.retainLoginInfo.Name = "retainLoginInfo";
-         this.retainLoginInfo.Size = new System.Drawing.Size(293, 17);
-         this.retainLoginInfo.TabIndex = 2;
-         this.retainLoginInfo.Text = "Retain login information for the remainder of this session?";
-         this.retainLoginInfo.UseVisualStyleBackColor = true;
-         // 
          // loginButton
          // 
-         this.loginButton.Location = new System.Drawing.Point(12, 86);
+         this.loginButton.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+         this.loginButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 18F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+         this.loginButton.Location = new System.Drawing.Point(12, 66);
          this.loginButton.Name = "loginButton";
-         this.loginButton.Size = new System.Drawing.Size(293, 23);
+         this.loginButton.Size = new System.Drawing.Size(293, 43);
          this.loginButton.TabIndex = 3;
          this.loginButton.Text = "Login";
          this.loginButton.UseVisualStyleBackColor = true;
-         // 
-         // infoLogRT
-         // 
-         this.infoLogRT.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
-            | System.Windows.Forms.AnchorStyles.Left) 
-            | System.Windows.Forms.AnchorStyles.Right)));
-         this.infoLogRT.Location = new System.Drawing.Point(312, 66);
-         this.infoLogRT.Name = "infoLogRT";
-         this.infoLogRT.ReadOnly = true;
-         this.infoLogRT.Size = new System.Drawing.Size(316, 43);
-         this.infoLogRT.TabIndex = 0;
-         this.infoLogRT.TabStop = false;
-         this.infoLogRT.Text = "";
          // 
          // revealPasswordButton
          // 
@@ -130,19 +108,33 @@ namespace DAZProductScraper
          this.revealPasswordButton.MouseDown += new System.Windows.Forms.MouseEventHandler(this.revealPasswordButton_MouseDown);
          this.revealPasswordButton.MouseUp += new System.Windows.Forms.MouseEventHandler(this.revealPasswordButton_MouseUp);
          // 
+         // infoLogRT
+         // 
+         this.infoLogRT.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
+            | System.Windows.Forms.AnchorStyles.Left) 
+            | System.Windows.Forms.AnchorStyles.Right)));
+         this.infoLogRT.Location = new System.Drawing.Point(312, 66);
+         this.infoLogRT.Name = "infoLogRT";
+         this.infoLogRT.ReadOnly = true;
+         this.infoLogRT.Size = new System.Drawing.Size(316, 43);
+         this.infoLogRT.TabIndex = 0;
+         this.infoLogRT.TabStop = false;
+         this.infoLogRT.Text = "";
+         // 
          // LoginPopup
          // 
+         this.AcceptButton = this.loginButton;
          this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
          this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
          this.ClientSize = new System.Drawing.Size(640, 121);
          this.Controls.Add(this.revealPasswordButton);
          this.Controls.Add(this.infoLogRT);
          this.Controls.Add(this.loginButton);
-         this.Controls.Add(this.retainLoginInfo);
          this.Controls.Add(this.passTextBox);
          this.Controls.Add(this.emailTextBox);
          this.Controls.Add(this.passLabel);
          this.Controls.Add(this.emailLabel);
+         this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
          this.HelpButton = true;
          this.MaximizeBox = false;
          this.MinimizeBox = false;
@@ -162,9 +154,8 @@ namespace DAZProductScraper
       private System.Windows.Forms.Label passLabel;
       private System.Windows.Forms.TextBox emailTextBox;
       private System.Windows.Forms.TextBox passTextBox;
-      private System.Windows.Forms.CheckBox retainLoginInfo;
       private System.Windows.Forms.Button loginButton;
-      private System.Windows.Forms.RichTextBox infoLogRT;
       private System.Windows.Forms.Button revealPasswordButton;
+      private System.Windows.Forms.RichTextBox infoLogRT;
    }
 }
