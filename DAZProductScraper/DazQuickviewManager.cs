@@ -167,20 +167,20 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
       }
    }
 
-   enum State
-   {
-      Undefined = 0,
-      LoadingBrowser,
-      BrowserLoaded,
-      LoadingLogin,
-      LoginLoaded,
-      LoggingIn,
-      LoggedIn,
-      LoadingProductPage,
-      ProductPageLoaded,
-      FetchingImages,
-      ImagesFetched
-   }
+   //enum State
+   //{
+   //   Undefined = 0,
+   //   LoadingBrowser,
+   //   BrowserLoaded,
+   //   LoadingLogin,
+   //   LoginLoaded,
+   //   LoggingIn,
+   //   LoggedIn,
+   //   LoadingProductPage,
+   //   ProductPageLoaded,
+   //   FetchingImages,
+   //   ImagesFetched
+   //}
 
    const string domain = "https://www.daz3d.com";
    const string productInfoApiUrl = domain + "/dazApi/slab/";
@@ -191,7 +191,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
 
    public static FetchConfig fetchConfig = new FetchConfig() { Resolution = FetchConfig.ThumbnailResolution.R2160p, JpgQuality = 80 };
 
-   private static State currentState;
+   //private static State currentState;
 
    private static Browser browser;
    private static Page webpage;
@@ -199,12 +199,13 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
 
    public static string email, pass;
 
-   public static void Start()
-   {
-      //Test();
-      System.IO.Directory.CreateDirectory(FetchConfig.GetRootFilePath());
-      ChangeState(State.LoadingBrowser);
-   }
+   #region Old
+   //public static void Start()
+   //{
+   //   //Test();
+   //   System.IO.Directory.CreateDirectory(FetchConfig.GetRootFilePath());
+   //   ChangeState(State.LoadingBrowser);
+   //}
 
 #if DEBUG
    //public static async void Test()
@@ -216,89 +217,98 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    //}
 #endif
 
-   public static void TryLogin()
+   //public static void TryLogin()
+   //{
+   //   if (currentState == State.LoginLoaded)
+   //   {
+   //      ChangeState(State.LoggingIn);
+   //   }
+   //}
+
+   //private static void ChangeState(State newState)
+   //{
+   //   currentState = newState;
+   //   switch (newState)
+   //   {
+   //      case State.Undefined:
+   //         throw new InvalidOperationException();
+   //      case State.LoadingBrowser:
+   //         InitializeBrowser(() => ChangeState(State.BrowserLoaded));
+   //         break;
+   //      case State.BrowserLoaded:
+   //         ChangeState(State.LoadingLogin);
+   //         break;
+   //      case State.LoadingLogin:
+   //         NavigateToLogin(() => ChangeState(State.LoginLoaded));
+   //         break;
+   //      case State.LoginLoaded:
+   //         //waiting
+   //         break;
+   //      case State.LoggingIn:
+   //         Login(email, pass, () => ChangeState(State.LoggedIn));
+   //         break;
+   //      case State.LoggedIn:
+   //         ChangeState(State.LoadingProductPage);
+   //         break;
+   //      case State.LoadingProductPage:
+   //         GoToProductsPage(() => ChangeState(State.ProductPageLoaded));
+   //         break;
+   //      case State.ProductPageLoaded:
+   //         GetProductsIds((List<string> l) =>
+   //         {
+   //            Console.WriteLine("Product Id's fetched");
+   //            GenerateData(l, () => Console.WriteLine("Done!!!"));
+   //         });
+   //         break;
+   //      default:
+   //         throw new InvalidOperationException();
+   //   }
+   //}
+   #endregion
+
+   public static async Task InitToLogin()
    {
-      if (currentState == State.LoginLoaded)
-      {
-         ChangeState(State.LoggingIn);
-      }
+      await InitializeBrowser();
+      await NavigateToLogin();
    }
 
-   private static void ChangeState(State newState)
+   public static async Task<bool> TryLogin(string email, string pass)
    {
-      currentState = newState;
-      switch (newState)
-      {
-         case State.Undefined:
-            throw new InvalidOperationException();
-         case State.LoadingBrowser:
-            InitializeBrowser(() => ChangeState(State.BrowserLoaded));
-            break;
-         case State.BrowserLoaded:
-            ChangeState(State.LoadingLogin);
-            break;
-         case State.LoadingLogin:
-            NavigateToLogin(() => ChangeState(State.LoginLoaded));
-            break;
-         case State.LoginLoaded:
-            //waiting
-            break;
-         case State.LoggingIn:
-            Login(email, pass, () => ChangeState(State.LoggedIn));
-            break;
-         case State.LoggedIn:
-            ChangeState(State.LoadingProductPage);
-            break;
-         case State.LoadingProductPage:
-            GoToProductsPage(() => ChangeState(State.ProductPageLoaded));
-            break;
-         case State.ProductPageLoaded:
-            GetProductsIds((List<string> l) =>
-            {
-               Console.WriteLine("Product Id's fetched");
-               GenerateData(l, () => Console.WriteLine("Done!!!"));
-            });
-            break;
-         default:
-            throw new InvalidOperationException();
-      }
+      return await Login(email, pass);
    }
 
    /// <summary>
    /// Starts up a browser instance and assigns the browser field to the new browser.
    /// </summary>
    /// <param name="completionCallback">Called when the browser has been started</param>
-   private static async void InitializeBrowser(Action completionCallback)
+   private static async Task InitializeBrowser()
    {
       BrowserFetcher browserFetch = Puppeteer.CreateBrowserFetcher(new BrowserFetcherOptions() { });
       RevisionInfo revInfo = await browserFetch.DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
-      Browser b = await Puppeteer.LaunchAsync(new LaunchOptions
+      browser = await Puppeteer.LaunchAsync(new LaunchOptions
       {
          Headless =
 #if DEBUG
-         true//false
+         false
 #else
          true
 #endif
          ,
          ExecutablePath = revInfo.ExecutablePath
       });
-      browser = b;
-      completionCallback?.Invoke();
    }
 
    /// <summary>
    /// Adds a new page to the browser and sends it to the daz login page.
    /// </summary>
    /// <param name="completionCallback">Called when the browser is at the login page</param>
-   private static async void NavigateToLogin(Action completionCallback)
+   private static async Task NavigateToLogin()
    {
       webpage = await browser.NewPageAsync();
 #if DEBUG
       await webpage.SetViewportAsync(new ViewPortOptions() { Width = 1920, Height = 1080 });
 #endif
       await webpage.GoToAsync(userLoginUrl);
-      completionCallback?.Invoke();
    }
 
    /// <summary>
@@ -307,7 +317,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    /// <param name="email">The email to submit</param>
    /// <param name="password">The password to submit</param>
    /// <param name="completionCallback">Called when the login is submitted</param>
-   private static async void Login(string email, string password, Action completionCallback)
+   private static async Task<bool> Login(string email, string password)
    {
       ElementHandle form = await webpage.WaitForSelectorAsync("#login-form");
       string loginJs = @"function puppeteerLogin(form)
@@ -321,8 +331,9 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
       await form.EvaluateFunctionAsync(loginJs);
       ElementHandle sendButton = await webpage.WaitForSelectorAsync("#send2");
       await sendButton.EvaluateFunctionAsync("(x) => x.click()");
-      await webpage.WaitForNavigationAsync();
-      completionCallback?.Invoke();
+      await webpage.WaitForNavigationAsync(new NavigationOptions() { Timeout = 5000 });
+      //Console.WriteLine("OK?: " + redirResponse.Ok);
+      return false; //TODO: return int code for timeout, failed but not timeout (bad credentials presumably), and success.
    }
 
    /// <summary>
@@ -420,7 +431,14 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    {
       webpage?.Dispose();
       browser?.Dispose();
-      programwideCancellation.Cancel();
-      programwideCancellation.Dispose();
+      try
+      {
+         programwideCancellation.Cancel();
+         programwideCancellation.Dispose();
+      }
+      catch
+      {
+         //guess we already cancelled.
+      }
    }
 }

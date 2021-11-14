@@ -36,6 +36,7 @@ namespace DAZProductScraper
 
       #region Fields
       private bool firstPrintOccurred = false;
+      public event Action<LoginPopup, string, string> onClickLogin;
       #endregion
 
       #region Ctors
@@ -76,9 +77,17 @@ namespace DAZProductScraper
          {
             infoLogRT.Clear();
          }
+         else
+         {
+            firstPrintOccurred = true;
+         }
          infoLogRT.SelectionColor = c;
          infoLogRT.AppendText((firstPrintOccurred ? "\n" : "") + info);
-         firstPrintOccurred = true;
+      }
+
+      public void SetLoginButtonState(bool state)
+      {
+         loginButton.Enabled = state;
       }
       #endregion
 
@@ -91,6 +100,12 @@ namespace DAZProductScraper
       private void revealPasswordButton_MouseUp(object sender, MouseEventArgs e)
       {
          passTextBox.UseSystemPasswordChar = true;
+      }
+
+      private void loginButton_Click(object sender, EventArgs e)
+      {
+         SetLoginButtonState(false);
+         onClickLogin?.Invoke(this, Email, Pass);
       }
       #endregion
    }

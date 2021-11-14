@@ -86,6 +86,7 @@ namespace DAZProductScraper
          this.loginButton.Anchor = ((System.Windows.Forms.AnchorStyles)((((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom) 
             | System.Windows.Forms.AnchorStyles.Left) 
             | System.Windows.Forms.AnchorStyles.Right)));
+         this.loginButton.Enabled = false;
          this.loginButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 18F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
          this.loginButton.Location = new System.Drawing.Point(12, 66);
          this.loginButton.Name = "loginButton";
@@ -93,6 +94,7 @@ namespace DAZProductScraper
          this.loginButton.TabIndex = 3;
          this.loginButton.Text = "Login";
          this.loginButton.UseVisualStyleBackColor = true;
+         this.loginButton.Click += new System.EventHandler(this.loginButton_Click);
          // 
          // revealPasswordButton
          // 
