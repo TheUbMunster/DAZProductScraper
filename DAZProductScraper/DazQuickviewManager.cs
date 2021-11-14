@@ -266,13 +266,17 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    //}
    #endregion
 
-   public static async Task InitToLogin()
+   public static async Task InitBrowser()
    {
       await InitializeBrowser();
-      await NavigateToLogin();
    }
 
-   public static async Task<bool> TryLogin(string email, string pass)
+   public static async Task GoToLogin(bool newPage = true)
+   {
+      await NavigateToLogin(newPage);
+   }
+
+   public static async Task<HttpStatusCode> TryLogin(string email, string pass)
    {
       return await Login(email, pass);
    }
@@ -302,9 +306,12 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    /// Adds a new page to the browser and sends it to the daz login page.
    /// </summary>
    /// <param name="completionCallback">Called when the browser is at the login page</param>
-   private static async Task NavigateToLogin()
+   private static async Task NavigateToLogin(bool newPage = true)
    {
-      webpage = await browser.NewPageAsync();
+      if (newPage) 
+      {
+         webpage = await browser.NewPageAsync();
+      }
 #if DEBUG
       await webpage.SetViewportAsync(new ViewPortOptions() { Width = 1920, Height = 1080 });
 #endif
@@ -317,7 +324,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    /// <param name="email">The email to submit</param>
    /// <param name="password">The password to submit</param>
    /// <param name="completionCallback">Called when the login is submitted</param>
-   private static async Task<bool> Login(string email, string password)
+   private static async Task<HttpStatusCode> Login(string email, string password)
    {
       ElementHandle form = await webpage.WaitForSelectorAsync("#login-form");
       string loginJs = @"function puppeteerLogin(form)
@@ -332,8 +339,9 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
       ElementHandle sendButton = await webpage.WaitForSelectorAsync("#send2");
       await sendButton.EvaluateFunctionAsync("(x) => x.click()");
       await webpage.WaitForNavigationAsync(new NavigationOptions() { Timeout = 5000 });
+      Response resp = await webpage.GoToAsync("https://www.daz3d.com/customer/account/loginPost/"); //internalservererror even if you login correctly
       //Console.WriteLine("OK?: " + redirResponse.Ok);
-      return false; //TODO: return int code for timeout, failed but not timeout (bad credentials presumably), and success.
+      return resp?.Status ?? ((HttpStatusCode)(-1)); //TODO: return int code for timeout, failed but not timeout (bad credentials presumably), and success.
    }
 
    /// <summary>

@@ -43,7 +43,8 @@ namespace DAZProductScraper
             pp.onClickLogin += OnLoginSubmit;
             Task.Run(async () =>
             {
-               await DazQuickviewManager.InitToLogin();
+               await DazQuickviewManager.InitBrowser();
+               await DazQuickviewManager.GoToLogin();
                pp.Invoke(new Action(() => pp.SetLoginButtonState(true)));
                pp.Invoke(new Action(() => pp.PrintInfoToConsoleBox("Browser loaded.", LoginPopup.ConsoleBoxColor.Green, true)));
             });
@@ -56,12 +57,34 @@ namespace DAZProductScraper
       {
          Task.Run(async () =>
          {
-            bool success = await DazQuickviewManager.TryLogin(email, pass);
-            if (success) /*valid credentials*/
+            System.Net.HttpStatusCode code = await DazQuickviewManager.TryLogin(email, pass);
+            bool success;
+            string logMessage;
+            switch (code)
+            {
+               default:
+               case (System.Net.HttpStatusCode)(-1):
+                  //null response.
+                  throw new NotImplementedException();
+                  break;
+               case System.Net.HttpStatusCode.BadRequest:
+               case System.Net.HttpStatusCode.InternalServerError:
+                  //failure
+                  logMessage = "Bad credentials, try again.";
+                  success = false;
+                  break;
+               case System.Net.HttpStatusCode.OK:
+                  //success.
+                  logMessage = "Login successful!";
+                  success = true;
+                  break;
+            }
+            if (success)
             {
                sender.onClickLogin -= OnLoginSubmit;
                Invoke(new Action(() =>
                {
+                  sender.Invoke(new Action(() => sender.PrintInfoToConsoleBox(logMessage, LoginPopup.ConsoleBoxColor.Green, true)));
                   sender.Close();
                   OnLoginSuccess();
                }));
@@ -70,7 +93,11 @@ namespace DAZProductScraper
             {
                sender.Invoke(new Action(() =>
                {
-                  sender.PrintInfoToConsoleBox("Login failed after 5 seconds.", LoginPopup.ConsoleBoxColor.Red, true);
+                  sender.PrintInfoToConsoleBox(logMessage, LoginPopup.ConsoleBoxColor.Red, true);
+               }));
+               await DazQuickviewManager.GoToLogin(false);
+               sender.Invoke(new Action(() =>
+               {
                   sender.SetLoginButtonState(true);
                }));
             }
