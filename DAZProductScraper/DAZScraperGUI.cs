@@ -58,48 +58,81 @@ namespace DAZProductScraper
          Task.Run(async () =>
          {
             System.Net.HttpStatusCode code = await DazQuickviewManager.TryLogin(email, pass);
-            bool success;
-            string logMessage;
-            switch (code)
             {
-               default:
-               case (System.Net.HttpStatusCode)(-1):
-                  //null response.
-                  throw new NotImplementedException();
-                  break;
-               case System.Net.HttpStatusCode.BadRequest:
-               case System.Net.HttpStatusCode.InternalServerError:
-                  //failure
-                  logMessage = "Bad credentials, try again.";
-                  success = false;
-                  break;
-               case System.Net.HttpStatusCode.OK:
-                  //success.
-                  logMessage = "Login successful!";
-                  success = true;
-                  break;
+               LoginPopup.ConsoleBoxColor col;
+               string codeType;
+               if ((int)code >= 200 && (int)code <= 299)
+               {
+                  codeType = "Success";
+                  col = LoginPopup.ConsoleBoxColor.Green;
+               }
+               else if ((int)code >= 300 && (int)code <= 399)
+               {
+                  codeType = "Redirect";
+                  col = LoginPopup.ConsoleBoxColor.Yellow;
+               }
+               else if ((int)code >= 400 && (int)code <= 499)
+               {
+                  codeType = "Client error";
+                  col = LoginPopup.ConsoleBoxColor.Red;
+               }
+               else if ((int)code >= 500 && (int)code <= 599)
+               {
+                  codeType = "Server error";
+                  col = LoginPopup.ConsoleBoxColor.Red;
+               }
+               else
+               {
+                  codeType = "Unclassified code";
+                  col = LoginPopup.ConsoleBoxColor.Grey;
+               }
+               sender.Invoke(new Action(() => sender.PrintInfoToConsoleBox($"HTTP code ({codeType}): {(int)code}", col, true)));
             }
-            if (success)
             {
-               sender.onClickLogin -= OnLoginSubmit;
-               Invoke(new Action(() =>
+               bool success;
+               string logMessage;
+               switch (code)
                {
-                  sender.Invoke(new Action(() => sender.PrintInfoToConsoleBox(logMessage, LoginPopup.ConsoleBoxColor.Green, true)));
-                  sender.Close();
-                  OnLoginSuccess();
-               }));
-            }
-            else
-            {
-               sender.Invoke(new Action(() =>
+                  default:
+                  case (System.Net.HttpStatusCode)(-1):
+                     //null response.
+                     throw new NotImplementedException();
+                     break;
+                  case System.Net.HttpStatusCode.BadRequest:
+                  case System.Net.HttpStatusCode.InternalServerError:
+                     //failure
+                     logMessage = "Bad credentials, try again.";
+                     success = false;
+                     break;
+                  case System.Net.HttpStatusCode.OK:
+                     //success.
+                     logMessage = "Login successful!";
+                     success = true;
+                     break;
+               }
+
+               if (success)
                {
-                  sender.PrintInfoToConsoleBox(logMessage, LoginPopup.ConsoleBoxColor.Red, true);
-               }));
-               await DazQuickviewManager.GoToLogin(false);
-               sender.Invoke(new Action(() =>
+                  sender.onClickLogin -= OnLoginSubmit;
+                  Invoke(new Action(() =>
+                  {
+                     sender.Invoke(new Action(() => sender.PrintInfoToConsoleBox(logMessage, LoginPopup.ConsoleBoxColor.Green, false)));
+                     sender.Close();
+                     OnLoginSuccess();
+                  }));
+               }
+               else
                {
-                  sender.SetLoginButtonState(true);
-               }));
+                  sender.Invoke(new Action(() =>
+                  {
+                     sender.PrintInfoToConsoleBox(logMessage, LoginPopup.ConsoleBoxColor.Red, false);
+                  }));
+                  await DazQuickviewManager.GoToLogin(false);
+                  sender.Invoke(new Action(() =>
+                  {
+                     sender.SetLoginButtonState(true);
+                  }));
+               }
             }
          });
       }

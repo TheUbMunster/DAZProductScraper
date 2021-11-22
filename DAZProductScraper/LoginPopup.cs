@@ -16,6 +16,7 @@ namespace DAZProductScraper
       public enum ConsoleBoxColor
       {
          Green = 1,
+         Yellow,
          Red,
          Grey,
          Black
@@ -60,6 +61,9 @@ namespace DAZProductScraper
          {
             case ConsoleBoxColor.Green:
                c = Color.Green;
+               break;
+            case ConsoleBoxColor.Yellow:
+               c = Color.Yellow;
                break;
             case ConsoleBoxColor.Red:
                c = Color.Red;
