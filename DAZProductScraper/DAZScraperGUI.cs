@@ -137,9 +137,10 @@ namespace DAZProductScraper
          });
       }
 
-      private void OnLoginSuccess()
+      private async void OnLoginSuccess()
       {
-
+         await DazQuickviewManager.NavigateToProductsPage();
+         await DazQuickviewManager.Generate(await DazQuickviewManager.FetchIds());
       }
 
       private void Application_ApplicationExit(object sender, EventArgs e)

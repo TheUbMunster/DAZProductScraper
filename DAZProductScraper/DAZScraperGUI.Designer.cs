@@ -34,9 +34,9 @@ namespace DAZProductScraper
          // 
          // openRootFolderButton
          // 
-         this.openRootFolderButton.Location = new System.Drawing.Point(394, 172);
+         this.openRootFolderButton.Location = new System.Drawing.Point(12, 12);
          this.openRootFolderButton.Name = "openRootFolderButton";
-         this.openRootFolderButton.Size = new System.Drawing.Size(215, 23);
+         this.openRootFolderButton.Size = new System.Drawing.Size(776, 23);
          this.openRootFolderButton.TabIndex = 0;
          this.openRootFolderButton.Text = "Open Root Folder";
          this.openRootFolderButton.UseVisualStyleBackColor = true;

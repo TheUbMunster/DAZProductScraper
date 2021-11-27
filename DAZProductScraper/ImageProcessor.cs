@@ -1,4 +1,4 @@
-//#define IMAGESHARP_IMAGE_PROCESSING
+#define IMAGESHARP_IMAGE_PROCESSING
 
 
 using System.Collections;
@@ -375,7 +375,7 @@ public static class ImageProcessor
                using (MemoryStream ms = new MemoryStream())
                {
                   mainImage.Save(ms, new JpegEncoder() { Quality = DazQuickviewManager.fetchConfig.JpgQuality });
-                  using (FileStream fs = File.Create(fetchConfig.SaveDirectory + "\\" + fileName + "-0.jpg"))
+                  using (FileStream fs = File.Create(FetchConfig.GetLibrarySaveDirectory() + "\\" + fileName + "-0.jpg"))
                   {
                      ms.Seek(0, SeekOrigin.Begin);
                      ms.CopyTo(fs);
@@ -581,7 +581,7 @@ public static class ImageProcessor
          using (MemoryStream ms = new MemoryStream())
          {
             image.Save(ms, new JpegEncoder() { Quality = DazQuickviewManager.fetchConfig.JpgQuality });
-            using (FileStream fs = File.Create(fetchConfig.SaveDirectory + $"\\" + fileName + "-0.jpg"))
+            using (FileStream fs = File.Create(FetchConfig.GetLibrarySaveDirectory() + $"\\" + fileName + "-0.jpg"))
             {
                ms.Seek(0, SeekOrigin.Begin);
                ms.CopyTo(fs);

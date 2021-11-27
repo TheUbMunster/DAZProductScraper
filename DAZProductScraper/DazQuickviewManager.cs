@@ -281,6 +281,21 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
       return await Login(email, pass);
    }
 
+   public static async Task NavigateToProductsPage()
+   {
+      await GoToProductsPage();
+   }
+
+   public static async Task<List<string>> FetchIds()
+   {
+      return await GetProductsIds();
+   }
+
+   public static async Task Generate(List<string> ids)
+   {
+      await GenerateData(ids);
+   }
+
    /// <summary>
    /// Starts up a browser instance and assigns the browser field to the new browser.
    /// </summary>
@@ -338,8 +353,8 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
       await form.EvaluateFunctionAsync(loginJs);
       ElementHandle sendButton = await webpage.WaitForSelectorAsync("#send2");
       await sendButton.EvaluateFunctionAsync("(x) => x.click()");
-      await webpage.WaitForNavigationAsync(new NavigationOptions() { Timeout = 5000 });
-      Response resp = await webpage.GoToAsync("https://www.daz3d.com/customer/account/loginPost/"); //internalservererror even if you login correctly
+      Response resp = await webpage.WaitForNavigationAsync(new NavigationOptions() { Timeout = 5000 });
+      //Response resp = await webpage.GoToAsync("https://www.daz3d.com/customer/account/loginPost/"); //internalservererror even if you login correctly
       //Console.WriteLine("OK?: " + redirResponse.Ok);
       return resp?.Status ?? ((HttpStatusCode)(-1)); //TODO: return int code for timeout, failed but not timeout (bad credentials presumably), and success.
    }
@@ -348,17 +363,16 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    /// Goes to the user's product page (after having logged in).
    /// </summary>
    /// <param name="completionCallback">Called when the webpage is directed to the product page</param>
-   private static async void GoToProductsPage(Action completionCallback)
+   private static async Task GoToProductsPage()
    {
       await webpage.GoToAsync(userProductPageUrl);
-      completionCallback?.Invoke();
    }
 
    /// <summary>
    /// Gets all of the product ids for this user and saves them in productIds
    /// </summary>
    /// <param name="completionCallback">Called when the ids are loaded</param>
-   private static async void GetProductsIds(Action<List<string>> completionCallback)
+   private static async Task<List<string>> GetProductsIds()
    {
       ElementHandle productList = await webpage.WaitForSelectorAsync("#product_list");
       string getProductIds = @"function getProductIds(root)
@@ -370,13 +384,13 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    }
    return result;
 }";
-      completionCallback?.Invoke(new List<string>((await productList.EvaluateFunctionAsync(getProductIds)).Select(x =>
+      return new List<string>((await productList.EvaluateFunctionAsync(getProductIds)).Select(x =>
       {
          string s = x.ToString();
          int i = s.IndexOf('_');
          //some interactive license products have an id xxxxx_xxxxx where the former is the real id.
          return s.Substring(0, i == -1 ? s.Length : i);
-      }).Distinct()));
+      }).Distinct());
    }
 
    /// <summary>
@@ -384,7 +398,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    /// </summary>
    /// <param name="ids">The product ids to generate the data for</param>
    /// <param name="completionCallback">Called when all the data has been generated.</param>
-   private static async void GenerateData(List<string> ids, Action completionCallback)
+   private static async Task GenerateData(List<string> ids)
    {
       using (SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrencyIO, maxConcurrencyIO))
       {
@@ -432,7 +446,6 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
          await Task.WhenAll(fetches);
          fetches.ForEach(x => x.Dispose());
       }
-      completionCallback?.Invoke();
    }
 
    public static void OnApplicationQuit()
