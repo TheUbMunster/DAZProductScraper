@@ -1,9 +1,8 @@
+//#define IMAGESHARP_IMAGE_PROCESSING
+
+
 using System.Collections;
 using System.Collections.Generic;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Advanced;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -11,8 +10,18 @@ using System;
 using System.Net;
 using System.IO;
 using System.Runtime.InteropServices;
+#if IMAGESHARP_IMAGE_PROCESSING
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Advanced;
+using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using SixLabors.ImageSharp.Formats.Png;
 using SixLabors.ImageSharp.Formats.Jpeg;
+#else
+using System.Drawing;
+using System.Drawing.Drawing2D;
+using System.Drawing.Imaging;
+#endif
 //using System.Diagnostics;
 using static DazQuickviewManager;
 
@@ -68,18 +77,25 @@ public static class ImageProcessor
          #region local declarations
          const int ioConcurrency = 4;
 
+#if IMAGESHARP_IMAGE_PROCESSING
          Configuration config = new Configuration(new PngConfigurationModule(), new JpegConfigurationModule());
          config.MaxDegreeOfParallelism = 1;
          config.SetGraphicsOptions(x =>
          {
             x.Antialias = false;
          });
+#endif
 
          int smallImageUncheckedCount = imageUrls.Length - 1;
          (int width, int height) resultDimensions = DazQuickviewManager.FetchConfig.GetResolution(DazQuickviewManager.fetchConfig.Resolution);
 
+#if IMAGESHARP_IMAGE_PROCESSING
          List<Image<Rgb24>> miniImages = new List<Image<Rgb24>>();
          Image<Rgb24> mainImage = null;
+#else
+         List<Image> miniImages = new List<Image>();
+         Image mainImage = null;
+#endif
          #endregion
 
          //only do main image
@@ -148,10 +164,25 @@ public static class ImageProcessor
                   System.Diagnostics.Stopwatch stl = new System.Diagnostics.Stopwatch();
                   stl.Start();
 #endif
+#if IMAGESHARP_IMAGE_PROCESSING
                   Image<Rgb24> img;
+#else
+                  Image img;
+#endif
+                  if (miniImages.Count >= maxNonMainImages)
+                  {
+                     break; // we have exceeded the number of images we would need, don't waste computing power generating the rest.
+                  }
                   try
                   {
+#if IMAGESHARP_IMAGE_PROCESSING
                      img = Image.Load<Rgb24>(config, dataFetches[i].Result);
+#else
+                     using (MemoryStream ms = new MemoryStream(dataFetches[i].Result))
+                     {
+                        img = Image.FromStream(ms);
+                     }
+#endif
                   }
                   catch
                   {
@@ -159,7 +190,7 @@ public static class ImageProcessor
                   }
                   if (i != 0)
                   {
-                     if (img != null && miniImages.Count < maxNonMainImages)
+                     if (img != null)
                      {
                         miniImages.Add(img);
                      }
@@ -177,57 +208,24 @@ public static class ImageProcessor
             #endregion
 
             dataFetches.ForEach(x => x.Dispose());
-
-            #region If none of the mini images were loaded, try to save just main image
-            if (miniImages.Count == 0) //no small images loaded.
-            {
-               //apparently we have/don't want no small images.
-               //no need to dispose smallImages because it's empty.
-               if (mainImage != null)
-               {
-                  mainImage.Mutate(o =>
-                  {
-                     o.Resize(new Size((int)(resultDimensions.height * (10f / 13f)), resultDimensions.height));
-                     o.Pad(resultDimensions.width, resultDimensions.height, Color.Black);
-                  });
-                  using (MemoryStream ms = new MemoryStream())
-                  {
-                     mainImage.Save(ms, new JpegEncoder() { Quality = DazQuickviewManager.fetchConfig.JpgQuality });
-                     using (FileStream fs = File.Create(fetchConfig.SaveDirectory + "\\" + fileName + "-0.jpg"))
-                     {
-                        ms.Seek(0, SeekOrigin.Begin);
-                        ms.CopyTo(fs);
-                        await fs.FlushAsync();
-                     }
-                  }
-                  mainImage.Dispose();
-               }
-               return; //if we just made an image we're done, else if no mini images, no main image, do nothing.
-            }
-            #endregion
+            dataFetches = null;
          }
 
-         #region Calculate max image dimensions
+         //the main and sub images are now loaded.
+         #region Resize individual images
+         int maxSubWidth, maxSubHeight;
          Func<int, int, int, int> Clamp = (v, min, max) =>
          {
             return v > max ? max : (v < min ? min : v);
          };
          int rowColCount = (int)Math.Ceiling(Math.Sqrt(Clamp(Math.Min(miniImages.Count, maxNumberOfSmallImagesPerThumbnail), 0, 16))); //should never be 0
-
-         //int maxMainWidth, maxMainHeight;
-         //maxMainHeight = resultDimensions.height;
-         //maxMainWidth = (int)((10d / 13d) * (double)maxMainHeight);
-
-         int maxSubWidth, maxSubHeight;
          maxSubWidth = maxSubHeight = (int)((double)resultDimensions.height / (double)rowColCount);
-         #endregion
-
-         #region resize the image
-#if DEBUG
-         System.Diagnostics.Stopwatch str = new System.Diagnostics.Stopwatch();
-         str.Start();
-#endif
          //size the big images up.
+#if DEBUG
+         System.Diagnostics.Stopwatch strm = new System.Diagnostics.Stopwatch();
+         strm.Start();
+#endif
+#if IMAGESHARP_IMAGE_PROCESSING
          mainImage?.Mutate(x =>
          {
             ResizeOptions resizeOpt = new ResizeOptions()
@@ -239,25 +237,182 @@ public static class ImageProcessor
             };
             x.Resize(resizeOpt);
          });
+#else
+         if (mainImage != null)
+         {
+            int height = resultDimensions.height;
+            int width = (int)Math.Floor((float)mainImage.Width * ((float)resultDimensions.height / (float)mainImage.Height));
+            Rectangle destRect = new Rectangle(0, 0, width, height);
+
+            Bitmap tempMainResize = new Bitmap(width, height);
+            tempMainResize.SetResolution(mainImage.HorizontalResolution, mainImage.VerticalResolution);
+            using (var graphics = Graphics.FromImage(tempMainResize))
+            {
+               graphics.CompositingMode = CompositingMode.SourceCopy;
+               graphics.CompositingQuality = CompositingQuality.HighQuality;
+               graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
+               graphics.SmoothingMode = SmoothingMode.HighQuality;
+               graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+               using (var wrapMode = new ImageAttributes())
+               {
+                  wrapMode.SetWrapMode(WrapMode.TileFlipXY);
+                  graphics.DrawImage(mainImage, destRect, 0, 0, mainImage.Width, mainImage.Height, GraphicsUnit.Pixel, wrapMode);
+               }
+            }
+            mainImage.Dispose();
+            mainImage = tempMainResize;
+         }
+#endif
+#if DEBUG
+         strm.Stop();
+         imageResizeTimes.Add(strm.ElapsedMilliseconds / 1000d);
+#endif
          //size the mini images down.
+#if IMAGESHARP_IMAGE_PROCESSING
          miniImages.ForEach(x =>
          {
+#if DEBUG
+            System.Diagnostics.Stopwatch str = new System.Diagnostics.Stopwatch();
+            str.Start();
+#endif
             ResizeOptions resizeOpt = new ResizeOptions()
             {
                Mode = ResizeMode.Max,
-               Size = new Size(maxSubWidth, maxSubWidth),
+               Size = new Size(maxSubWidth, maxSubHeight),
                Sampler = KnownResamplers.Triangle
             };
             x.Mutate(o =>
             {
                o.Resize(resizeOpt);
             });
-         });
-
 #if DEBUG
-         str.Stop();
-         imageResizeTimes.Add(str.ElapsedMilliseconds / 1000d);
+            str.Stop();
+            imageResizeTimes.Add(str.ElapsedMilliseconds / 1000d);
 #endif
+         });
+#else
+         for (int i = 0; i < miniImages.Count; i++)
+         {
+#if DEBUG
+            System.Diagnostics.Stopwatch str = new System.Diagnostics.Stopwatch();
+            str.Start();
+#endif
+            Image subImage = miniImages[i];
+
+            float widthDivHeight = (float)subImage.Width / (float)subImage.Height;
+
+            int width;
+            int height;
+            if (widthDivHeight < 1f)
+            {
+               //max out height (portrait)
+               height = maxSubHeight;
+               width = (int)((float)maxSubHeight * widthDivHeight);
+            }
+            else if (widthDivHeight > 1f)
+            {
+               //max out width (landscape)
+               height = (int)((float)maxSubWidth / widthDivHeight);
+               width = maxSubWidth;
+            }
+            else
+            {
+               //square
+               width = maxSubWidth;
+               height = maxSubHeight;
+            }
+            //int height = resultDimensions.height;
+            //int width = (int)Math.Floor((float)subImage.Width * ((float)resultDimensions.height / (float)subImage.Height));
+            Rectangle destRect = new Rectangle(0, 0, width, height);
+
+            Bitmap tempSubResize = new Bitmap(width, height);
+            tempSubResize.SetResolution(subImage.HorizontalResolution, subImage.VerticalResolution);
+            using (var graphics = Graphics.FromImage(tempSubResize))
+            {
+               graphics.CompositingMode = CompositingMode.SourceCopy;
+               graphics.CompositingQuality = CompositingQuality.HighQuality;
+               graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
+               graphics.SmoothingMode = SmoothingMode.HighQuality;
+               graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+               using (var wrapMode = new ImageAttributes())
+               {
+                  wrapMode.SetWrapMode(WrapMode.TileFlipXY);
+                  graphics.DrawImage(subImage, destRect, 0, 0, subImage.Width, subImage.Height, GraphicsUnit.Pixel, wrapMode);
+               }
+            }
+            subImage.Dispose();
+            miniImages[i] = tempSubResize;
+#if DEBUG
+            str.Stop();
+            imageResizeTimes.Add(str.ElapsedMilliseconds / 1000d);
+#endif
+         }
+#endif
+         #endregion
+
+         #region If none of the mini images were loaded, try to save just main image
+         if (miniImages.Count == 0) //no small images loaded.
+         {
+            //apparently we have/don't want no small images.
+            //no need to dispose smallImages because it's empty.
+            if (mainImage != null)
+            {
+#if IMAGESHARP_IMAGE_PROCESSING
+               ResizeOptions resizeOpt = new ResizeOptions()
+               {
+                  Mode = ResizeMode.Max,
+                  Size = new Size(resultDimensions.width, resultDimensions.height),
+                  Sampler = KnownResamplers.Triangle
+               };
+               mainImage.Mutate(o =>
+               {
+                  //o.Resize(new Size((int)(resultDimensions.height * (10f / 13f)), resultDimensions.height)); //fix this 11/26/2021 //this line shouldn't be necessary because we already resize the main image.
+                  o.Resize(resizeOpt);
+                  o.Pad(resultDimensions.width, resultDimensions.height, Color.Black);
+               });
+               using (MemoryStream ms = new MemoryStream())
+               {
+                  mainImage.Save(ms, new JpegEncoder() { Quality = DazQuickviewManager.fetchConfig.JpgQuality });
+                  using (FileStream fs = File.Create(fetchConfig.SaveDirectory + "\\" + fileName + "-0.jpg"))
+                  {
+                     ms.Seek(0, SeekOrigin.Begin);
+                     ms.CopyTo(fs);
+                     await fs.FlushAsync();
+                  }
+               }
+               mainImage.Dispose();
+#else
+               Rectangle destRect = new Rectangle(0, 0, mainImage.Width, mainImage.Height);
+
+               Bitmap tempMainResize = new Bitmap(resultDimensions.width, resultDimensions.height);
+               tempMainResize.SetResolution(mainImage.HorizontalResolution, mainImage.VerticalResolution);
+               using (var graphics = Graphics.FromImage(tempMainResize))
+               {
+                  graphics.CompositingMode = CompositingMode.SourceCopy;
+                  graphics.CompositingQuality = CompositingQuality.HighQuality;
+                  graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
+                  graphics.SmoothingMode = SmoothingMode.HighQuality;
+                  graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+                  graphics.DrawImageUnscaled(mainImage, (int)((resultDimensions.width / 2f) - (mainImage.Width / 2f)), 0);
+                  //using (var wrapMode = new ImageAttributes())
+                  //{
+                  //   wrapMode.SetWrapMode(WrapMode.TileFlipXY);
+                  //   //graphics.DrawImage(mainImage, destRect, (int)((resultDimensions.width / 2f) - (mainImage.Width / 2f)), 0, mainImage.Width, mainImage.Height, GraphicsUnit.Pixel, wrapMode);
+                  //}
+               }
+               mainImage.Dispose();
+               mainImage = tempMainResize;
+               ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(x => x.FormatID == ImageFormat.Jpeg.Guid);
+               EncoderParameters encParam = new EncoderParameters(1);
+               encParam.Param[0] = new EncoderParameter(Encoder.Quality, DazQuickviewManager.fetchConfig.JpgQuality);
+               mainImage.Save(fetchConfig.SaveDirectory + "\\" + fileName + "-0.jpg", codec, encParam);
+#endif
+            }
+            return; //if we just made an image we're done, else if no mini images, no main image, do nothing.
+         }
          #endregion
 
          //put the images in the result image.
@@ -268,13 +423,21 @@ public static class ImageProcessor
          //int rootTopMainImage = (int)((resultDimensions.height - (mainImage?.Height) ?? 0) / 2d);
          int rootTopMainImage = 0;
 
+#if IMAGESHARP_IMAGE_PROCESSING
          List<Image<Rgb24>> resultImages = new List<Image<Rgb24>>();
+#else
+         List<Image> resultImages = new List<Image>();
+#endif
          int numberOfImages = (int)Math.Ceiling((double)miniImages.Count / (double)maxNumberOfSmallImagesPerThumbnail);
          numberOfImages = maxThumbnails < numberOfImages ? maxThumbnails : numberOfImages;
 
          for (int i = 0; i < numberOfImages; i++)
          {
+#if IMAGESHARP_IMAGE_PROCESSING
             Image<Rgb24> resultImage = new Image<Rgb24>(config, resultDimensions.width, resultDimensions.height, new Rgb24(0, 0, 0));
+#else
+            Bitmap resultImage = new Bitmap(resultDimensions.width, resultDimensions.height);
+#endif
             resultImages.Add(resultImage);
 
             #region Draw images onto result image
@@ -282,7 +445,7 @@ public static class ImageProcessor
             System.Diagnostics.Stopwatch std = new System.Diagnostics.Stopwatch();
             std.Start();
 #endif
-
+#if IMAGESHARP_IMAGE_PROCESSING
             resultImage.Mutate(o =>
             {
                //main image
@@ -308,7 +471,36 @@ public static class ImageProcessor
                   }
                }
             });
+#else
+            using (var graphics = Graphics.FromImage(resultImage))
+            {
+               graphics.CompositingMode = CompositingMode.SourceCopy;
+               graphics.CompositingQuality = CompositingQuality.HighQuality;
+               graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
+               graphics.SmoothingMode = SmoothingMode.HighQuality;
+               graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
+               if (mainImage != null)
+               {
+                  graphics.DrawImageUnscaled(mainImage, rootLeftMainImage, rootTopMainImage);
+               }
+               int max = (i + 1) * maxNumberOfSmallImagesPerThumbnail;
+               max = max > miniImages.Count ? miniImages.Count : max;
+               for (int si = i * maxNumberOfSmallImagesPerThumbnail; si < max; si++)
+               {
+                  int pi = si - (i * maxNumberOfSmallImagesPerThumbnail);
+                  int x = pi % rowColCount;
+                  int y = (pi - x) / rowColCount;
+                  if (miniImages[si] != null)
+                  {
+                     int iw = (int)((maxSubWidth - miniImages[si].Width) / 2d);
+                     int ih = (int)((maxSubHeight - miniImages[si].Height) / 2d);
+                     Point pos = new Point(rootLeftSubImages + (x * maxSubWidth) + iw, (y * maxSubHeight) + ih);
+                     graphics.DrawImageUnscaled(miniImages[si], pos);
+                  }
+               }
+            }
+#endif
 #if DEBUG
             std.Stop();
             imageDrawTimes.Add(std.ElapsedMilliseconds / 1000d);
@@ -317,19 +509,20 @@ public static class ImageProcessor
          }
 
          //DISPOSE THE IMAGES
-         foreach (Image<Rgb24> i in miniImages)
+         foreach (var i in miniImages)
          {
             i?.Dispose();
          }
          mainImage?.Dispose();
 
          #region save result images
-#if DEBUG
-         System.Diagnostics.Stopwatch svt = new System.Diagnostics.Stopwatch();
-         svt.Start();
-#endif
          for (int i = 0; i < resultImages.Count; i++)
          {
+#if DEBUG
+            System.Diagnostics.Stopwatch svt = new System.Diagnostics.Stopwatch();
+            svt.Start();
+#endif
+#if IMAGESHARP_IMAGE_PROCESSING
             using (MemoryStream ms = new MemoryStream())
             {
                resultImages[i].Save(ms, new JpegEncoder() { Quality = DazQuickviewManager.fetchConfig.JpgQuality });
@@ -340,17 +533,24 @@ public static class ImageProcessor
                   await fs.FlushAsync();
                }
             }
-            resultImages[i].Dispose();
-         }
-#if DEBUG
-         svt.Stop();
-         imageSaveTimes.Add(svt.ElapsedMilliseconds / 1000d);
+
+#else
+            ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(x => x.FormatID == ImageFormat.Jpeg.Guid);
+            EncoderParameters encParam = new EncoderParameters(1);
+            encParam.Param[0] = new EncoderParameter(Encoder.Quality, DazQuickviewManager.fetchConfig.JpgQuality);
+            resultImages[i].Save(fetchConfig.SaveDirectory + "\\" + fileName + $"-{i}.jpg", codec, encParam);
 #endif
+            resultImages[i].Dispose();
+#if DEBUG
+            svt.Stop();
+            imageSaveTimes.Add(svt.ElapsedMilliseconds / 1000d);
+#endif
+         }
          #endregion
       }
       catch (Exception e)
       {
-         Console.WriteLine("BADBADBAD\n\n" + e.GetType().ToString() + " : " + e.Message + "\n\n" + e.StackTrace);
+         Console.WriteLine("A bad thing occurred in the ImageProcessor. \n\n" + e.GetType().ToString() + " : " + e.Message + "\n\n" + e.StackTrace);
       }
    }
 
@@ -362,6 +562,7 @@ public static class ImageProcessor
    /// <returns>A task representing the process</returns>
    public static async Task GenerateImage(byte[] imageData, string fileName)
    {
+#if IMAGESHARP_IMAGE_PROCESSING
       Configuration config = new Configuration(new PngConfigurationModule(), new JpegConfigurationModule());
       config.MaxDegreeOfParallelism = 1;
       config.SetGraphicsOptions(x =>
@@ -373,7 +574,7 @@ public static class ImageProcessor
       {
          image.Mutate(o =>
          {
-            o.Resize(new Size((int)(resultDimensions.height * (10f / 13f)), resultDimensions.height));
+            o.Resize(new Size((int)(resultDimensions.height * (10f / 13f)), resultDimensions.height)); //fix this 11/26/2021
             o.Pad(resultDimensions.width, resultDimensions.height, Color.Black);
          });
 
@@ -388,5 +589,37 @@ public static class ImageProcessor
             }
          }
       }
+#else
+      (int width, int height) resultDimensions = DazQuickviewManager.FetchConfig.GetResolution(DazQuickviewManager.fetchConfig.Resolution);
+      using (MemoryStream ms = new MemoryStream(imageData))
+      using (Image image = Image.FromStream(ms))
+      {
+         int height = resultDimensions.height;
+         int width = (int)Math.Floor((float)image.Width * ((float)resultDimensions.height / (float)image.Height));
+         Rectangle destRect = new Rectangle(0, 0, width, height);
+
+         Bitmap temp = new Bitmap(resultDimensions.width, resultDimensions.height);
+         temp.SetResolution(image.HorizontalResolution, image.VerticalResolution);
+         using (var graphics = Graphics.FromImage(temp))
+         {
+            graphics.CompositingMode = CompositingMode.SourceCopy;
+            graphics.CompositingQuality = CompositingQuality.HighQuality;
+            graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
+            graphics.SmoothingMode = SmoothingMode.HighQuality;
+            graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+            using (var wrapMode = new ImageAttributes())
+            {
+               wrapMode.SetWrapMode(WrapMode.TileFlipXY);
+               graphics.DrawImage(image, destRect, (int)((resultDimensions.width / 2f) - (image.Width / 2f)), 0, image.Width, image.Height, GraphicsUnit.Pixel, wrapMode);
+            }
+         }
+
+         ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(x => x.FormatID == ImageFormat.Jpeg.Guid);
+         EncoderParameters encParam = new EncoderParameters(1);
+         encParam.Param[0] = new EncoderParameter(Encoder.Quality, DazQuickviewManager.fetchConfig.JpgQuality);
+         temp.Save(fetchConfig.SaveDirectory + "\\" + fileName + "-0.jpg", codec, encParam);
+      }
+#endif
    }
 }
