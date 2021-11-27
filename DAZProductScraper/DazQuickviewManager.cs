@@ -401,6 +401,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    private static async Task GenerateData(List<string> ids)
    {
       using (SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrencyIO, maxConcurrencyIO))
+      //using (SemaphoreSlim semaphore = new SemaphoreSlim(1, 1))
       {
          List<Task> fetches = new List<Task>();
          const int amountPerSlam = 200;

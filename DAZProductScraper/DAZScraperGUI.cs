@@ -32,6 +32,7 @@ namespace DAZProductScraper
       {
          InitializeComponent();
          Application.ApplicationExit += Application_ApplicationExit;
+         Directory.CreateDirectory(DazQuickviewManager.FetchConfig.GetLibrarySaveDirectory());
          //FormClosed += (a, b) => Application_ApplicationExit(a, b);
       }
 

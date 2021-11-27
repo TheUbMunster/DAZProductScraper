@@ -1,4 +1,4 @@
-#define IMAGESHARP_IMAGE_PROCESSING
+//#define IMAGESHARP_IMAGE_PROCESSING
 
 
 using System.Collections;
@@ -384,7 +384,38 @@ public static class ImageProcessor
                }
                mainImage.Dispose();
 #else
-               Rectangle destRect = new Rectangle(0, 0, mainImage.Width, mainImage.Height);
+
+               float widthDivHeight = (float)mainImage.Width / (float)mainImage.Height;
+
+               int width;
+               int height;
+               int x;
+               int y;
+               if (widthDivHeight < 1f)
+               {
+                  //max out height (portrait)
+                  height = resultDimensions.height;
+                  width = (int)((float)resultDimensions.height * widthDivHeight);
+                  x = (int)((resultDimensions.width / 2f) - (width / 2f));
+                  y = 0;
+               }
+               else if (widthDivHeight > 1f)
+               {
+                  //max out width (landscape)
+                  height = (int)((float)resultDimensions.width / widthDivHeight);
+                  width = resultDimensions.width;
+                  x = 0;
+                  y = (int)((resultDimensions.height / 2f) - (height / 2f));
+               }
+               else
+               {
+                  //square
+                  width = resultDimensions.width;
+                  height = resultDimensions.height;
+                  x = y = 0;
+               }
+               
+               Rectangle destRect = new Rectangle(x, y, mainImage.Width, mainImage.Height);
 
                Bitmap tempMainResize = new Bitmap(resultDimensions.width, resultDimensions.height);
                tempMainResize.SetResolution(mainImage.HorizontalResolution, mainImage.VerticalResolution);
@@ -396,16 +427,16 @@ public static class ImageProcessor
                   graphics.SmoothingMode = SmoothingMode.HighQuality;
                   graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
-                  graphics.DrawImageUnscaled(mainImage, (int)((resultDimensions.width / 2f) - (mainImage.Width / 2f)), 0);
-                  //using (var wrapMode = new ImageAttributes())
-                  //{
-                  //   wrapMode.SetWrapMode(WrapMode.TileFlipXY);
-                  //   //graphics.DrawImage(mainImage, destRect, (int)((resultDimensions.width / 2f) - (mainImage.Width / 2f)), 0, mainImage.Width, mainImage.Height, GraphicsUnit.Pixel, wrapMode);
-                  //}
+                  //graphics.DrawImageUnscaled(mainImage, (int)((resultDimensions.width / 2f) - (mainImage.Width / 2f)), 0); not all are 13 by 10
+                  using (var wrapMode = new ImageAttributes())
+                  {
+                     wrapMode.SetWrapMode(WrapMode.TileFlipXY);
+                     graphics.DrawImage(mainImage, destRect, 0, 0, mainImage.Width, mainImage.Height, GraphicsUnit.Pixel, wrapMode);
+                  }
                }
                mainImage.Dispose();
                mainImage = tempMainResize;
-               ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(x => x.FormatID == ImageFormat.Jpeg.Guid);
+               ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(cd => cd.FormatID == ImageFormat.Jpeg.Guid);
                EncoderParameters encParam = new EncoderParameters(1);
                encParam.Param[0] = new EncoderParameter(Encoder.Quality, DazQuickviewManager.fetchConfig.JpgQuality);
                mainImage.Save(FetchConfig.GetLibrarySaveDirectory() + "\\" + fileName + "-0.jpg", codec, encParam);
@@ -451,7 +482,7 @@ public static class ImageProcessor
                //main image
                if (mainImage != null)
                {
-                  o.DrawImage(mainImage, new Point(rootLeftMainImage, rootTopMainImage), 1f);
+                  o.DrawImage(mainImage, new Point(rootLeftMainImage, rootTopMainImage), 1f); //fix this so it puts it into a box.
                }
                //sub images
                int max = (i + 1) * maxNumberOfSmallImagesPerThumbnail;
@@ -482,7 +513,45 @@ public static class ImageProcessor
 
                if (mainImage != null)
                {
-                  graphics.DrawImageUnscaled(mainImage, rootLeftMainImage, rootTopMainImage);
+                  float widthDivHeight = (float)mainImage.Width / (float)mainImage.Height;
+
+                  int width;
+                  int height;
+                  int x;
+                  int y;
+                  if (widthDivHeight < 1f)
+                  {
+                     //max out height (portrait)
+                     height = resultDimensions.height;
+                     width = (int)((float)resultDimensions.height * widthDivHeight);
+                     x = (int)(((rootLeftSubImages - rootLeftMainImage) / 2f) - (width / 2f));
+                     y = 0;
+                  }
+                  else if (widthDivHeight > 1f)
+                  {
+                     //max out width (landscape)
+                     height = (int)((float)(rootLeftSubImages - rootLeftMainImage) / widthDivHeight);
+                     width = (rootLeftSubImages - rootLeftMainImage);
+                     x = 0;
+                     y = (int)((resultDimensions.height / 2f) - (height / 2f));
+                  }
+                  else
+                  {
+                     //square
+                     width = (rootLeftSubImages - rootLeftMainImage);
+                     height = resultDimensions.height;
+                     x = y = 0;
+                  }
+
+                  Rectangle destRect = new Rectangle(x, y, mainImage.Width, mainImage.Height);
+
+                  //graphics.DrawImageUnscaled(mainImage, rootLeftMainImage, rootTopMainImage); //put it into a box.
+
+                  using (var wrapMode = new ImageAttributes())
+                  {
+                     wrapMode.SetWrapMode(WrapMode.TileFlipXY);
+                     graphics.DrawImage(mainImage, destRect, 0, 0, mainImage.Width, mainImage.Height, GraphicsUnit.Pixel, wrapMode);
+                  }
                }
                int max = (i + 1) * maxNumberOfSmallImagesPerThumbnail;
                max = max > miniImages.Count ? miniImages.Count : max;
@@ -596,7 +665,7 @@ public static class ImageProcessor
       {
          int height = resultDimensions.height;
          int width = (int)Math.Floor((float)image.Width * ((float)resultDimensions.height / (float)image.Height));
-         Rectangle destRect = new Rectangle(0, 0, width, height);
+         Rectangle destRect = new Rectangle((int)((resultDimensions.width / 2f) - (width / 2f)), 0, width, height);
 
          Bitmap temp = new Bitmap(resultDimensions.width, resultDimensions.height);
          temp.SetResolution(image.HorizontalResolution, image.VerticalResolution);
@@ -611,7 +680,7 @@ public static class ImageProcessor
             using (var wrapMode = new ImageAttributes())
             {
                wrapMode.SetWrapMode(WrapMode.TileFlipXY);
-               graphics.DrawImage(image, destRect, (int)((resultDimensions.width / 2f) - (image.Width / 2f)), 0, image.Width, image.Height, GraphicsUnit.Pixel, wrapMode);
+               graphics.DrawImage(image, destRect, 0, 0, image.Width, image.Height, GraphicsUnit.Pixel, wrapMode);
             }
          }
 
