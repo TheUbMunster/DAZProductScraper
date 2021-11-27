@@ -1,4 +1,4 @@
-//#define IMAGESHARP_IMAGE_PROCESSING
+#define IMAGESHARP_IMAGE_PROCESSING
 
 
 using System.Collections;
@@ -225,45 +225,45 @@ public static class ImageProcessor
          System.Diagnostics.Stopwatch strm = new System.Diagnostics.Stopwatch();
          strm.Start();
 #endif
-#if IMAGESHARP_IMAGE_PROCESSING
-         mainImage?.Mutate(x =>
-         {
-            ResizeOptions resizeOpt = new ResizeOptions()
-            {
-               Mode = ResizeMode.Max,
-               //Size = new Size(maxMainWidth, maxMainHeight),
-               Size = new Size(int.MaxValue, resultDimensions.height),
-               Sampler = KnownResamplers.Triangle
-            };
-            x.Resize(resizeOpt);
-         });
-#else
-         if (mainImage != null)
-         {
-            int height = resultDimensions.height;
-            int width = (int)Math.Floor((float)mainImage.Width * ((float)resultDimensions.height / (float)mainImage.Height));
-            Rectangle destRect = new Rectangle(0, 0, width, height);
+         //#if IMAGESHARP_IMAGE_PROCESSING
+         //         mainImage?.Mutate(x =>
+         //         {
+         //            ResizeOptions resizeOpt = new ResizeOptions()
+         //            {
+         //               Mode = ResizeMode.Max,
+         //               //Size = new Size(maxMainWidth, maxMainHeight),
+         //               Size = new Size(int.MaxValue, resultDimensions.height),
+         //               Sampler = KnownResamplers.Triangle
+         //            };
+         //            x.Resize(resizeOpt);
+         //         });
+         //#else
+         //         if (mainImage != null)
+         //         {
+         //            int height = resultDimensions.height;
+         //            int width = (int)Math.Floor((float)mainImage.Width * ((float)resultDimensions.height / (float)mainImage.Height));
+         //            Rectangle destRect = new Rectangle(0, 0, width, height);
 
-            Bitmap tempMainResize = new Bitmap(width, height);
-            tempMainResize.SetResolution(mainImage.HorizontalResolution, mainImage.VerticalResolution);
-            using (var graphics = Graphics.FromImage(tempMainResize))
-            {
-               graphics.CompositingMode = CompositingMode.SourceCopy;
-               graphics.CompositingQuality = CompositingQuality.HighQuality;
-               graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
-               graphics.SmoothingMode = SmoothingMode.HighQuality;
-               graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+         //            Bitmap tempMainResize = new Bitmap(width, height);
+         //            tempMainResize.SetResolution(mainImage.HorizontalResolution, mainImage.VerticalResolution);
+         //            using (var graphics = Graphics.FromImage(tempMainResize))
+         //            {
+         //               graphics.CompositingMode = CompositingMode.SourceCopy;
+         //               graphics.CompositingQuality = CompositingQuality.HighQuality;
+         //               graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
+         //               graphics.SmoothingMode = SmoothingMode.HighQuality;
+         //               graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
 
-               using (var wrapMode = new ImageAttributes())
-               {
-                  wrapMode.SetWrapMode(WrapMode.TileFlipXY);
-                  graphics.DrawImage(mainImage, destRect, 0, 0, mainImage.Width, mainImage.Height, GraphicsUnit.Pixel, wrapMode);
-               }
-            }
-            mainImage.Dispose();
-            mainImage = tempMainResize;
-         }
-#endif
+         //               using (var wrapMode = new ImageAttributes())
+         //               {
+         //                  wrapMode.SetWrapMode(WrapMode.TileFlipXY);
+         //                  graphics.DrawImage(mainImage, destRect, 0, 0, mainImage.Width, mainImage.Height, GraphicsUnit.Pixel, wrapMode);
+         //               }
+         //            }
+         //            mainImage.Dispose();
+         //            mainImage = tempMainResize;
+         //         }
+         //#endif
 #if DEBUG
          strm.Stop();
          imageResizeTimes.Add(strm.ElapsedMilliseconds / 1000d);
@@ -368,7 +368,6 @@ public static class ImageProcessor
                };
                mainImage.Mutate(o =>
                {
-                  //o.Resize(new Size((int)(resultDimensions.height * (10f / 13f)), resultDimensions.height)); //fix this 11/26/2021 //this line shouldn't be necessary because we already resize the main image.
                   o.Resize(resizeOpt);
                   o.Pad(resultDimensions.width, resultDimensions.height, Color.Black);
                });
@@ -477,13 +476,23 @@ public static class ImageProcessor
             std.Start();
 #endif
 #if IMAGESHARP_IMAGE_PROCESSING
+            //main image
+            if (mainImage != null)
+            {
+               ResizeOptions resizeOpt = new ResizeOptions()
+               {
+                  Mode = ResizeMode.Max,
+                  Size = new Size((rootLeftSubImages - rootLeftMainImage), resultDimensions.height),
+                  Sampler = KnownResamplers.Triangle
+               };
+               mainImage.Mutate(mo =>
+               {
+                  mo.Resize(resizeOpt);
+               });
+            }
             resultImage.Mutate(o =>
             {
-               //main image
-               if (mainImage != null)
-               {
-                  o.DrawImage(mainImage, new Point(rootLeftMainImage, rootTopMainImage), 1f); //fix this so it puts it into a box.
-               }
+               o.DrawImage(mainImage, new Point(rootLeftMainImage, rootTopMainImage), 1f);
                //sub images
                int max = (i + 1) * maxNumberOfSmallImagesPerThumbnail;
                max = max > miniImages.Count ? miniImages.Count : max;
@@ -640,22 +649,25 @@ public static class ImageProcessor
       });
       (int width, int height) resultDimensions = DazQuickviewManager.FetchConfig.GetResolution(DazQuickviewManager.fetchConfig.Resolution);
       using (Image<Rgb24> image = Image.Load<Rgb24>(config, imageData))
+      using (MemoryStream ms = new MemoryStream())
+      using (FileStream fs = File.Create(FetchConfig.GetLibrarySaveDirectory() + $"\\" + fileName + "-0.jpg"))
       {
+         ResizeOptions resizeOpt = new ResizeOptions()
+         {
+            Mode = ResizeMode.Max,
+            Size = new Size(resultDimensions.width, resultDimensions.height),
+            Sampler = KnownResamplers.Triangle
+         };
          image.Mutate(o =>
          {
-            o.Resize(new Size((int)(resultDimensions.height * (10f / 13f)), resultDimensions.height)); //fix this 11/26/2021
+            o.Resize(resizeOpt);
             o.Pad(resultDimensions.width, resultDimensions.height, Color.Black);
          });
-
-         using (MemoryStream ms = new MemoryStream())
+         image.Save(ms, new JpegEncoder() { Quality = DazQuickviewManager.fetchConfig.JpgQuality });
          {
-            image.Save(ms, new JpegEncoder() { Quality = DazQuickviewManager.fetchConfig.JpgQuality });
-            using (FileStream fs = File.Create(FetchConfig.GetLibrarySaveDirectory() + $"\\" + fileName + "-0.jpg"))
-            {
-               ms.Seek(0, SeekOrigin.Begin);
-               ms.CopyTo(fs);
-               await fs.FlushAsync();
-            }
+            ms.Seek(0, SeekOrigin.Begin);
+            ms.CopyTo(fs);
+            await fs.FlushAsync();
          }
       }
 #else
