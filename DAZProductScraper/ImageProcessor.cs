@@ -408,7 +408,7 @@ public static class ImageProcessor
                ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(x => x.FormatID == ImageFormat.Jpeg.Guid);
                EncoderParameters encParam = new EncoderParameters(1);
                encParam.Param[0] = new EncoderParameter(Encoder.Quality, DazQuickviewManager.fetchConfig.JpgQuality);
-               mainImage.Save(fetchConfig.SaveDirectory + "\\" + fileName + "-0.jpg", codec, encParam);
+               mainImage.Save(FetchConfig.GetLibrarySaveDirectory() + "\\" + fileName + "-0.jpg", codec, encParam);
 #endif
             }
             return; //if we just made an image we're done, else if no mini images, no main image, do nothing.
@@ -538,7 +538,7 @@ public static class ImageProcessor
             ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(x => x.FormatID == ImageFormat.Jpeg.Guid);
             EncoderParameters encParam = new EncoderParameters(1);
             encParam.Param[0] = new EncoderParameter(Encoder.Quality, DazQuickviewManager.fetchConfig.JpgQuality);
-            resultImages[i].Save(fetchConfig.SaveDirectory + "\\" + fileName + $"-{i}.jpg", codec, encParam);
+            resultImages[i].Save(FetchConfig.GetLibrarySaveDirectory() + "\\" + fileName + $"-{i}.jpg", codec, encParam);
 #endif
             resultImages[i].Dispose();
 #if DEBUG
@@ -569,12 +569,12 @@ public static class ImageProcessor
       {
          x.Antialias = false;
       });
-      (int width, int height) resultDim = DazQuickviewManager.FetchConfig.GetResolution(DazQuickviewManager.fetchConfig.Resolution);
+      (int width, int height) resultDimensions = DazQuickviewManager.FetchConfig.GetResolution(DazQuickviewManager.fetchConfig.Resolution);
       using (Image<Rgb24> image = Image.Load<Rgb24>(config, imageData))
       {
          image.Mutate(o =>
          {
-            o.Resize(new Size((int)(resultDimensions.height * (10f / 13f)), resultDimensions.height));
+            o.Resize(new Size((int)(resultDimensions.height * (10f / 13f)), resultDimensions.height)); //fix this 11/26/2021
             o.Pad(resultDimensions.width, resultDimensions.height, Color.Black);
          });
 
@@ -588,6 +588,37 @@ public static class ImageProcessor
                await fs.FlushAsync();
             }
          }
+      }
+#else
+      (int width, int height) resultDimensions = DazQuickviewManager.FetchConfig.GetResolution(DazQuickviewManager.fetchConfig.Resolution);
+      using (MemoryStream ms = new MemoryStream(imageData))
+      using (Image image = Image.FromStream(ms))
+      {
+         int height = resultDimensions.height;
+         int width = (int)Math.Floor((float)image.Width * ((float)resultDimensions.height / (float)image.Height));
+         Rectangle destRect = new Rectangle(0, 0, width, height);
+
+         Bitmap temp = new Bitmap(resultDimensions.width, resultDimensions.height);
+         temp.SetResolution(image.HorizontalResolution, image.VerticalResolution);
+         using (var graphics = Graphics.FromImage(temp))
+         {
+            graphics.CompositingMode = CompositingMode.SourceCopy;
+            graphics.CompositingQuality = CompositingQuality.HighQuality;
+            graphics.InterpolationMode = InterpolationMode.HighQualityBilinear;
+            graphics.SmoothingMode = SmoothingMode.HighQuality;
+            graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+
+            using (var wrapMode = new ImageAttributes())
+            {
+               wrapMode.SetWrapMode(WrapMode.TileFlipXY);
+               graphics.DrawImage(image, destRect, (int)((resultDimensions.width / 2f) - (image.Width / 2f)), 0, image.Width, image.Height, GraphicsUnit.Pixel, wrapMode);
+            }
+         }
+
+         ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(x => x.FormatID == ImageFormat.Jpeg.Guid);
+         EncoderParameters encParam = new EncoderParameters(1);
+         encParam.Param[0] = new EncoderParameter(Encoder.Quality, DazQuickviewManager.fetchConfig.JpgQuality);
+         temp.Save(FetchConfig.GetLibrarySaveDirectory() + "\\" + fileName + "-0.jpg", codec, encParam);
       }
 #endif
    }
