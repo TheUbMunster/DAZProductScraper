@@ -13,6 +13,7 @@ using System.Net;
 using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
+using System.IO;
 
 public static class DazQuickviewManager
 {
@@ -48,10 +49,15 @@ public static class DazQuickviewManager
          R2160p
       }
 
+      private const string RootSaveDirectory = "DAZProductScraper_Data";
+      private const string LibrarySaveDirectory = "Data_Library";
+
       public ThumbnailResolution Resolution { get; set; } = ThumbnailResolution.R1080p;
       public int JpgQuality { get; set; } = 75;
-      public string SaveDirectory { get; set; } = "DAZProductScraper_Data";
+      public int ImageSaveConcurrency { get; set; } = 1;
+      public int ImageFetchConcurrency { get; set; } = 2;
 
+      #region Static Helpers
       public static (int width, int height) GetResolution(ThumbnailResolution res)
       {
          switch (res)
@@ -70,6 +76,17 @@ public static class DazQuickviewManager
                throw new ArgumentException($"The value {res} is not a valid resolution. Make sure to only pass values defined in the enum.");
          }
       }
+
+      public static string GetRootFilePath()
+      {
+         return Path.GetFullPath(RootSaveDirectory);
+      }
+
+      public static string GetLibrarySaveDirectory()
+      {
+         return Path.GetFullPath(LibrarySaveDirectory);
+      }
+      #endregion
    }
 
    public class ProductInfoFetch
@@ -150,20 +167,20 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
       }
    }
 
-   enum State
-   {
-      Undefined = 0,
-      LoadingBrowser,
-      BrowserLoaded,
-      LoadingLogin,
-      LoginLoaded,
-      LoggingIn,
-      LoggedIn,
-      LoadingProductPage,
-      ProductPageLoaded,
-      FetchingImages,
-      ImagesFetched
-   }
+   //enum State
+   //{
+   //   Undefined = 0,
+   //   LoadingBrowser,
+   //   BrowserLoaded,
+   //   LoadingLogin,
+   //   LoginLoaded,
+   //   LoggingIn,
+   //   LoggedIn,
+   //   LoadingProductPage,
+   //   ProductPageLoaded,
+   //   FetchingImages,
+   //   ImagesFetched
+   //}
 
    const string domain = "https://www.daz3d.com";
    const string productInfoApiUrl = domain + "/dazApi/slab/";
@@ -174,7 +191,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
 
    public static FetchConfig fetchConfig = new FetchConfig() { Resolution = FetchConfig.ThumbnailResolution.R2160p, JpgQuality = 80 };
 
-   private static State currentState;
+   //private static State currentState;
 
    private static Browser browser;
    private static Page webpage;
@@ -182,106 +199,123 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
 
    public static string email, pass;
 
-   public static void Start()
-   {
-      //Test();
-      System.IO.Directory.CreateDirectory(fetchConfig.SaveDirectory);
-      ChangeState(State.LoadingBrowser);
-   }
+   #region Old
+   //public static void Start()
+   //{
+   //   //Test();
+   //   System.IO.Directory.CreateDirectory(FetchConfig.GetRootFilePath());
+   //   ChangeState(State.LoadingBrowser);
+   //}
 
 #if DEBUG
-   public static async void Test()
-   {
-      System.IO.Directory.CreateDirectory(fetchConfig.SaveDirectory);
-      ProductInfoFetch pif = new ProductInfoFetch("49035");
-      await pif.FetchData();
-      await ImageProcessor.GenerateImage(pif.imageUrls, pif.cleanedProductName, 2, 32, 100);
-   }
+   //public static async void Test()
+   //{
+   //   System.IO.Directory.CreateDirectory(fetchConfig.RootSaveDirectory);
+   //   ProductInfoFetch pif = new ProductInfoFetch("49035");
+   //   await pif.FetchData();
+   //   await ImageProcessor.GenerateImage(pif.imageUrls, pif.cleanedProductName, 2, 32, 100);
+   //}
 #endif
 
-   public static void TryLogin()
+   //public static void TryLogin()
+   //{
+   //   if (currentState == State.LoginLoaded)
+   //   {
+   //      ChangeState(State.LoggingIn);
+   //   }
+   //}
+
+   //private static void ChangeState(State newState)
+   //{
+   //   currentState = newState;
+   //   switch (newState)
+   //   {
+   //      case State.Undefined:
+   //         throw new InvalidOperationException();
+   //      case State.LoadingBrowser:
+   //         InitializeBrowser(() => ChangeState(State.BrowserLoaded));
+   //         break;
+   //      case State.BrowserLoaded:
+   //         ChangeState(State.LoadingLogin);
+   //         break;
+   //      case State.LoadingLogin:
+   //         NavigateToLogin(() => ChangeState(State.LoginLoaded));
+   //         break;
+   //      case State.LoginLoaded:
+   //         //waiting
+   //         break;
+   //      case State.LoggingIn:
+   //         Login(email, pass, () => ChangeState(State.LoggedIn));
+   //         break;
+   //      case State.LoggedIn:
+   //         ChangeState(State.LoadingProductPage);
+   //         break;
+   //      case State.LoadingProductPage:
+   //         GoToProductsPage(() => ChangeState(State.ProductPageLoaded));
+   //         break;
+   //      case State.ProductPageLoaded:
+   //         GetProductsIds((List<string> l) =>
+   //         {
+   //            Console.WriteLine("Product Id's fetched");
+   //            GenerateData(l, () => Console.WriteLine("Done!!!"));
+   //         });
+   //         break;
+   //      default:
+   //         throw new InvalidOperationException();
+   //   }
+   //}
+   #endregion
+
+   public static async Task InitBrowser()
    {
-      if (currentState == State.LoginLoaded)
-      {
-         ChangeState(State.LoggingIn);
-      }
+      await InitializeBrowser();
    }
 
-   private static void ChangeState(State newState)
+   public static async Task GoToLogin(bool newPage = true)
    {
-      currentState = newState;
-      switch (newState)
-      {
-         case State.Undefined:
-            throw new InvalidOperationException();
-         case State.LoadingBrowser:
-            InitializeBrowser(() => ChangeState(State.BrowserLoaded));
-            break;
-         case State.BrowserLoaded:
-            ChangeState(State.LoadingLogin);
-            break;
-         case State.LoadingLogin:
-            NavigateToLogin(() => ChangeState(State.LoginLoaded));
-            break;
-         case State.LoginLoaded:
-            //waiting
-            break;
-         case State.LoggingIn:
-            Login(email, pass, () => ChangeState(State.LoggedIn));
-            break;
-         case State.LoggedIn:
-            ChangeState(State.LoadingProductPage);
-            break;
-         case State.LoadingProductPage:
-            GoToProductsPage(() => ChangeState(State.ProductPageLoaded));
-            break;
-         case State.ProductPageLoaded:
-            GetProductsIds((List<string> l) =>
-            {
-               Console.WriteLine("Product Id's fetched");
-               GenerateData(l, () => Console.WriteLine("Done!!!"));
-            });
-            break;
-         default:
-            throw new InvalidOperationException();
-      }
+      await NavigateToLogin(newPage);
+   }
+
+   public static async Task<HttpStatusCode> TryLogin(string email, string pass)
+   {
+      return await Login(email, pass);
    }
 
    /// <summary>
    /// Starts up a browser instance and assigns the browser field to the new browser.
    /// </summary>
    /// <param name="completionCallback">Called when the browser has been started</param>
-   private static async void InitializeBrowser(Action completionCallback)
+   private static async Task InitializeBrowser()
    {
       BrowserFetcher browserFetch = Puppeteer.CreateBrowserFetcher(new BrowserFetcherOptions() { });
       RevisionInfo revInfo = await browserFetch.DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
-      Browser b = await Puppeteer.LaunchAsync(new LaunchOptions
+      browser = await Puppeteer.LaunchAsync(new LaunchOptions
       {
          Headless =
 #if DEBUG
-         true//false
+         false
 #else
          true
 #endif
          ,
          ExecutablePath = revInfo.ExecutablePath
       });
-      browser = b;
-      completionCallback?.Invoke();
    }
 
    /// <summary>
    /// Adds a new page to the browser and sends it to the daz login page.
    /// </summary>
    /// <param name="completionCallback">Called when the browser is at the login page</param>
-   private static async void NavigateToLogin(Action completionCallback)
+   private static async Task NavigateToLogin(bool newPage = true)
    {
-      webpage = await browser.NewPageAsync();
+      if (newPage) 
+      {
+         webpage = await browser.NewPageAsync();
+      }
 #if DEBUG
       await webpage.SetViewportAsync(new ViewPortOptions() { Width = 1920, Height = 1080 });
 #endif
       await webpage.GoToAsync(userLoginUrl);
-      completionCallback?.Invoke();
    }
 
    /// <summary>
@@ -290,7 +324,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    /// <param name="email">The email to submit</param>
    /// <param name="password">The password to submit</param>
    /// <param name="completionCallback">Called when the login is submitted</param>
-   private static async void Login(string email, string password, Action completionCallback)
+   private static async Task<HttpStatusCode> Login(string email, string password)
    {
       ElementHandle form = await webpage.WaitForSelectorAsync("#login-form");
       string loginJs = @"function puppeteerLogin(form)
@@ -304,8 +338,10 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
       await form.EvaluateFunctionAsync(loginJs);
       ElementHandle sendButton = await webpage.WaitForSelectorAsync("#send2");
       await sendButton.EvaluateFunctionAsync("(x) => x.click()");
-      await webpage.WaitForNavigationAsync();
-      completionCallback?.Invoke();
+      await webpage.WaitForNavigationAsync(new NavigationOptions() { Timeout = 5000 });
+      Response resp = await webpage.GoToAsync("https://www.daz3d.com/customer/account/loginPost/"); //internalservererror even if you login correctly
+      //Console.WriteLine("OK?: " + redirResponse.Ok);
+      return resp?.Status ?? ((HttpStatusCode)(-1)); //TODO: return int code for timeout, failed but not timeout (bad credentials presumably), and success.
    }
 
    /// <summary>
@@ -350,7 +386,6 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    /// <param name="completionCallback">Called when all the data has been generated.</param>
    private static async void GenerateData(List<string> ids, Action completionCallback)
    {
-      System.IO.Directory.CreateDirectory(fetchConfig.SaveDirectory);
       using (SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrencyIO, maxConcurrencyIO))
       {
          List<Task> fetches = new List<Task>();
@@ -404,7 +439,14 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    {
       webpage?.Dispose();
       browser?.Dispose();
-      programwideCancellation.Cancel();
-      programwideCancellation.Dispose();
+      try
+      {
+         programwideCancellation.Cancel();
+         programwideCancellation.Dispose();
+      }
+      catch
+      {
+         //guess we already cancelled.
+      }
    }
 }

@@ -7,8 +7,8 @@
     <ProjectGuid>{34082DD5-5BA0-4D5D-852A-F602C5AE53CD}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>DataFetcher</RootNamespace>
-    <AssemblyName>DataFetcher</AssemblyName>
+    <RootNamespace>DAZProductScraper</RootNamespace>
+    <AssemblyName>DAZProductScraper</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -163,8 +163,19 @@
       <DependentUpon>DAZScraperGUI.cs</DependentUpon>
     </Compile>
     <Compile Include="ImageProcessor.cs" />
+    <Compile Include="LoginPopup.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="LoginPopup.Designer.cs">
+      <DependentUpon>LoginPopup.cs</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Include="app.config" />
@@ -173,6 +184,13 @@
   <ItemGroup>
     <EmbeddedResource Include="DAZScraperGUI.resx">
       <DependentUpon>DAZScraperGUI.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="LoginPopup.resx">
+      <DependentUpon>LoginPopup.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
