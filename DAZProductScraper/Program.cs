@@ -16,7 +16,8 @@ namespace DAZProductScraper
       {
          Application.EnableVisualStyles();
          Application.SetCompatibleTextRenderingDefault(false);
-         Application.Run(new DAZScraperGUI());
+         //Ctor of DAZScraperGUI should take the browser created here.
+         Application.Run(new DAZScraperGUI()); //TRY CATCH FINALLY CLOSE THE BROWSER HERE
       }
    }
 }

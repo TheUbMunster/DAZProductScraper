@@ -1,4 +1,4 @@
-#define IMAGESHARP_IMAGE_PROCESSING
+//#define IMAGESHARP_IMAGE_PROCESSING
 
 
 using System.Collections;
@@ -23,7 +23,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 #endif
 //using System.Diagnostics;
-using static DazQuickviewManager;
+using static DAZScraperModel;
 
 public static class ImageProcessor
 {
@@ -87,7 +87,7 @@ public static class ImageProcessor
 #endif
 
          int smallImageUncheckedCount = imageUrls.Length - 1;
-         (int width, int height) resultDimensions = DazQuickviewManager.FetchConfig.GetResolution(DazQuickviewManager.fetchConfig.Resolution);
+         (int width, int height) resultDimensions = DAZScraperModel.FetchConfig.GetResolution(DAZScraperModel.fetchConfig.Resolution);
 
 #if IMAGESHARP_IMAGE_PROCESSING
          List<Image<Rgb24>> miniImages = new List<Image<Rgb24>>();
@@ -101,9 +101,11 @@ public static class ImageProcessor
          //only do main image
          if (maxNonMainImages == 0 || maxNumberOfSmallImagesPerThumbnail == 0) //edge case
          {
-            WebClient wc = new WebClient();
-            byte[] result = await wc.DownloadDataTaskAsync(imageUrls[0]);
-            wc.Dispose();
+            byte[] result = null;
+            using (WebClient wc = new WebClient())
+            {
+               result = await wc.DownloadDataTaskAsync(imageUrls[0]);
+            }
             if (result != null)
             {
                await GenerateImage(result, fileName);
@@ -220,11 +222,12 @@ public static class ImageProcessor
          };
          int rowColCount = (int)Math.Ceiling(Math.Sqrt(Clamp(Math.Min(miniImages.Count, maxNumberOfSmallImagesPerThumbnail), 0, 16))); //should never be 0
          maxSubWidth = maxSubHeight = (int)((double)resultDimensions.height / (double)rowColCount);
-         //size the big images up.
-#if DEBUG
-         System.Diagnostics.Stopwatch strm = new System.Diagnostics.Stopwatch();
-         strm.Start();
-#endif
+         #region Resize Main image
+         //size the main images up.
+         //#if DEBUG
+         //         System.Diagnostics.Stopwatch strm = new System.Diagnostics.Stopwatch();
+         //         strm.Start();
+         //#endif
          //#if IMAGESHARP_IMAGE_PROCESSING
          //         mainImage?.Mutate(x =>
          //         {
@@ -264,11 +267,12 @@ public static class ImageProcessor
          //            mainImage = tempMainResize;
          //         }
          //#endif
-#if DEBUG
-         strm.Stop();
-         imageResizeTimes.Add(strm.ElapsedMilliseconds / 1000d);
-#endif
-         //size the mini images down.
+         //#if DEBUG
+         //         strm.Stop();
+         //         imageResizeTimes.Add(strm.ElapsedMilliseconds / 1000d);
+         //#endif
+         #endregion
+         //resize the mini images.
 #if IMAGESHARP_IMAGE_PROCESSING
          miniImages.ForEach(x =>
          {
@@ -298,9 +302,7 @@ public static class ImageProcessor
             System.Diagnostics.Stopwatch str = new System.Diagnostics.Stopwatch();
             str.Start();
 #endif
-            Image subImage = miniImages[i];
-
-            float widthDivHeight = (float)subImage.Width / (float)subImage.Height;
+            float widthDivHeight = (float)miniImages[i].Width / (float)miniImages[i].Height;
 
             int width;
             int height;
@@ -327,7 +329,7 @@ public static class ImageProcessor
             Rectangle destRect = new Rectangle(0, 0, width, height);
 
             Bitmap tempSubResize = new Bitmap(width, height);
-            tempSubResize.SetResolution(subImage.HorizontalResolution, subImage.VerticalResolution);
+            tempSubResize.SetResolution(miniImages[i].HorizontalResolution, miniImages[i].VerticalResolution);
             using (var graphics = Graphics.FromImage(tempSubResize))
             {
                graphics.CompositingMode = CompositingMode.SourceCopy;
@@ -339,10 +341,10 @@ public static class ImageProcessor
                using (var wrapMode = new ImageAttributes())
                {
                   wrapMode.SetWrapMode(WrapMode.TileFlipXY);
-                  graphics.DrawImage(subImage, destRect, 0, 0, subImage.Width, subImage.Height, GraphicsUnit.Pixel, wrapMode);
+                  graphics.DrawImage(miniImages[i], destRect, 0, 0, miniImages[i].Width, miniImages[i].Height, GraphicsUnit.Pixel, wrapMode);
                }
             }
-            subImage.Dispose();
+            miniImages[i].Dispose();
             miniImages[i] = tempSubResize;
 #if DEBUG
             str.Stop();
@@ -414,7 +416,7 @@ public static class ImageProcessor
                   x = y = 0;
                }
                
-               Rectangle destRect = new Rectangle(x, y, mainImage.Width, mainImage.Height);
+               Rectangle destRect = new Rectangle(x, y, width, width);
 
                Bitmap tempMainResize = new Bitmap(resultDimensions.width, resultDimensions.height);
                tempMainResize.SetResolution(mainImage.HorizontalResolution, mainImage.VerticalResolution);
@@ -437,7 +439,7 @@ public static class ImageProcessor
                mainImage = tempMainResize;
                ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(cd => cd.FormatID == ImageFormat.Jpeg.Guid);
                EncoderParameters encParam = new EncoderParameters(1);
-               encParam.Param[0] = new EncoderParameter(Encoder.Quality, DazQuickviewManager.fetchConfig.JpgQuality);
+               encParam.Param[0] = new EncoderParameter(Encoder.Quality, DAZScraperModel.fetchConfig.JpgQuality);
                mainImage.Save(FetchConfig.GetLibrarySaveDirectory() + "\\" + fileName + "-0.jpg", codec, encParam);
 #endif
             }
@@ -549,10 +551,10 @@ public static class ImageProcessor
                      //square
                      width = (rootLeftSubImages - rootLeftMainImage);
                      height = resultDimensions.height;
-                     x = y = 0;
+                     x = y = 0; //fix this: this shouldnt be 0???? not sure
                   }
 
-                  Rectangle destRect = new Rectangle(x, y, mainImage.Width, mainImage.Height);
+                  Rectangle destRect = new Rectangle(x - x, y, width, height); //x - x is just 0, but it's representing removing the thin black edge at the left of the image.
 
                   //graphics.DrawImageUnscaled(mainImage, rootLeftMainImage, rootTopMainImage); //put it into a box.
 
@@ -615,7 +617,7 @@ public static class ImageProcessor
 #else
             ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(x => x.FormatID == ImageFormat.Jpeg.Guid);
             EncoderParameters encParam = new EncoderParameters(1);
-            encParam.Param[0] = new EncoderParameter(Encoder.Quality, DazQuickviewManager.fetchConfig.JpgQuality);
+            encParam.Param[0] = new EncoderParameter(Encoder.Quality, DAZScraperModel.fetchConfig.JpgQuality);
             resultImages[i].Save(FetchConfig.GetLibrarySaveDirectory() + "\\" + fileName + $"-{i}.jpg", codec, encParam);
 #endif
             resultImages[i].Dispose();
@@ -671,7 +673,7 @@ public static class ImageProcessor
          }
       }
 #else
-      (int width, int height) resultDimensions = DazQuickviewManager.FetchConfig.GetResolution(DazQuickviewManager.fetchConfig.Resolution);
+      (int width, int height) resultDimensions = DAZScraperModel.FetchConfig.GetResolution(DAZScraperModel.fetchConfig.Resolution);
       using (MemoryStream ms = new MemoryStream(imageData))
       using (Image image = Image.FromStream(ms))
       {
@@ -698,7 +700,7 @@ public static class ImageProcessor
 
          ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(x => x.FormatID == ImageFormat.Jpeg.Guid);
          EncoderParameters encParam = new EncoderParameters(1);
-         encParam.Param[0] = new EncoderParameter(Encoder.Quality, DazQuickviewManager.fetchConfig.JpgQuality);
+         encParam.Param[0] = new EncoderParameter(Encoder.Quality, DAZScraperModel.fetchConfig.JpgQuality);
          temp.Save(FetchConfig.GetLibrarySaveDirectory() + "\\" + fileName + "-0.jpg", codec, encParam);
       }
 #endif

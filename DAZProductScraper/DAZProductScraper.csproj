@@ -155,7 +155,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DazQuickviewManager.cs" />
+    <Compile Include="DAZScraperModel.cs" />
     <Compile Include="DAZScraperGUI.cs">
       <SubType>Form</SubType>
     </Compile>

@@ -32,7 +32,7 @@ namespace DAZProductScraper
       {
          InitializeComponent();
          Application.ApplicationExit += Application_ApplicationExit;
-         Directory.CreateDirectory(DazQuickviewManager.FetchConfig.GetLibrarySaveDirectory());
+         Directory.CreateDirectory(DAZScraperModel.FetchConfig.GetLibrarySaveDirectory());
          //FormClosed += (a, b) => Application_ApplicationExit(a, b);
       }
 
@@ -44,8 +44,8 @@ namespace DAZProductScraper
             pp.onClickLogin += OnLoginSubmit;
             Task.Run(async () =>
             {
-               await DazQuickviewManager.InitBrowser();
-               await DazQuickviewManager.GoToLogin();
+               await DAZScraperModel.InitBrowser();
+               await DAZScraperModel.GoToLogin();
                pp.Invoke(new Action(() => pp.SetLoginButtonState(true)));
                pp.Invoke(new Action(() => pp.PrintInfoToConsoleBox("Browser loaded.", LoginPopup.ConsoleBoxColor.Green, true)));
             });
@@ -58,7 +58,7 @@ namespace DAZProductScraper
       {
          Task.Run(async () =>
          {
-            System.Net.HttpStatusCode code = await DazQuickviewManager.TryLogin(email, pass);
+            System.Net.HttpStatusCode code = await DAZScraperModel.TryLogin(email, pass);
             {
                LoginPopup.ConsoleBoxColor col;
                string codeType;
@@ -128,7 +128,7 @@ namespace DAZProductScraper
                   {
                      sender.PrintInfoToConsoleBox(logMessage, LoginPopup.ConsoleBoxColor.Red, false);
                   }));
-                  await DazQuickviewManager.GoToLogin(false);
+                  await DAZScraperModel.GoToLogin(false);
                   sender.Invoke(new Action(() =>
                   {
                      sender.SetLoginButtonState(true);
@@ -140,31 +140,25 @@ namespace DAZProductScraper
 
       private async void OnLoginSuccess()
       {
-         await DazQuickviewManager.NavigateToProductsPage();
-         await DazQuickviewManager.Generate(await DazQuickviewManager.FetchIds());
+         await DAZScraperModel.NavigateToProductsPage();
+         await DAZScraperModel.Generate(await DAZScraperModel.FetchIds());
       }
 
       private void Application_ApplicationExit(object sender, EventArgs e)
       {
-         DazQuickviewManager.OnApplicationQuit();
+         DAZScraperModel.OnApplicationQuit();
       }
 
       private void openRootFolderButton_Click(object sender, EventArgs e)
       {
-         string p = DazQuickviewManager.FetchConfig.GetRootFilePath();
-         if (Directory.Exists(p))
+         string p = DAZScraperModel.FetchConfig.GetRootFilePath();
+         Directory.CreateDirectory(p);
+         ProcessStartInfo si = new ProcessStartInfo
          {
-            ProcessStartInfo si = new ProcessStartInfo
-            {
-               Arguments = p,
-               FileName = "explorer.exe"
-            };
-            Process.Start(si);
-         }
-         else
-         {
-
-         }
+            Arguments = p,
+            FileName = "explorer.exe"
+         };
+         Process.Start(si);
       }
    }
 }

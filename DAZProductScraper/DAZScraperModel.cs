@@ -15,7 +15,7 @@ using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.IO;
 
-public static class DazQuickviewManager
+public static class DAZScraperModel
 {
    //TODO:
    /*
@@ -313,7 +313,8 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
          true
 #endif
          ,
-         ExecutablePath = revInfo.ExecutablePath
+         ExecutablePath = revInfo.ExecutablePath,
+         Timeout = 5000
       });
    }
 
@@ -400,6 +401,15 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    /// <param name="completionCallback">Called when all the data has been generated.</param>
    private static async Task GenerateData(List<string> ids)
    {
+      //ids = new List<string>
+      //{
+      //   "16280",
+      //   "80823",
+      //   "46841",
+      //   "82636",
+      //   "82662",
+      //   "56001"
+      //};
       using (SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrencyIO, maxConcurrencyIO))
       //using (SemaphoreSlim semaphore = new SemaphoreSlim(1, 1))
       {
