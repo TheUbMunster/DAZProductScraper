@@ -401,17 +401,16 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    /// <param name="completionCallback">Called when all the data has been generated.</param>
    private static async Task GenerateData(List<string> ids)
    {
-      ids = new List<string>
-      {
-         //"81647",
-         //"16280",
-         //"80823",
-         //"46841",
-         //"82636",
-         //"82662",
-         //"56001",
-         "83128" //check this one 11/29/2021 aspect ratio squished to square towards the top of the image
-      };
+      //ids = new List<string>
+      //{
+      //   //"81647",
+      //   //"16280",
+      //   //"80823",
+      //   //"46841",
+      //   //"82636",
+      //   //"82662",
+      //   //"56001",
+      //};
       using (SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrencyIO, maxConcurrencyIO))
       //using (SemaphoreSlim semaphore = new SemaphoreSlim(1, 1))
       {
