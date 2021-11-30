@@ -403,13 +403,14 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    {
       ids = new List<string>
       {
-         "81647"
+         //"81647",
          //"16280",
          //"80823",
          //"46841",
          //"82636",
          //"82662",
-         //"56001"
+         //"56001",
+         "83128" //check this one 11/29/2021 aspect ratio squished to square towards the top of the image
       };
       using (SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrencyIO, maxConcurrencyIO))
       //using (SemaphoreSlim semaphore = new SemaphoreSlim(1, 1))

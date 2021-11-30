@@ -151,7 +151,7 @@ namespace DAZProductScraper
 
       private void openRootFolderButton_Click(object sender, EventArgs e)
       {
-         string p = DAZScraperModel.FetchConfig.GetRootFilePath();
+         string p = DAZScraperModel.FetchConfig.GetLibrarySaveDirectory();
          Directory.CreateDirectory(p);
          ProcessStartInfo si = new ProcessStartInfo
          {
