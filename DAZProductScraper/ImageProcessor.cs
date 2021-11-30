@@ -329,7 +329,7 @@ public static class ImageProcessor
             Rectangle destRect = new Rectangle(0, 0, width, height);
 
             Bitmap tempSubResize = new Bitmap(width, height);
-            tempSubResize.SetResolution(miniImages[i].HorizontalResolution, miniImages[i].VerticalResolution);
+            //tempSubResize.SetResolution(miniImages[i].HorizontalResolution, miniImages[i].VerticalResolution);
             using (var graphics = Graphics.FromImage(tempSubResize))
             {
                graphics.CompositingMode = CompositingMode.SourceCopy;
@@ -419,7 +419,7 @@ public static class ImageProcessor
                Rectangle destRect = new Rectangle(x, y, width, height);
 
                Bitmap tempMainResize = new Bitmap(resultDimensions.width, resultDimensions.height);
-               tempMainResize.SetResolution(mainImage.HorizontalResolution, mainImage.VerticalResolution);
+               //tempMainResize.SetResolution(mainImage.HorizontalResolution, mainImage.VerticalResolution);
                using (var graphics = Graphics.FromImage(tempMainResize))
                {
                   graphics.CompositingMode = CompositingMode.SourceCopy;
@@ -576,8 +576,8 @@ public static class ImageProcessor
                      int iw = (int)((maxSubWidth - miniImages[si].Width) / 2d);
                      int ih = (int)((maxSubHeight - miniImages[si].Height) / 2d);
                      Point pos = new Point(rootLeftSubImages + (x * maxSubWidth) + iw, (y * maxSubHeight) + ih);
-                     int wdd = miniImages[si].Width;
-                     int htt = miniImages[si].Height;
+                     //int wdd = miniImages[si].Width;
+                     //int htt = miniImages[si].Height;
                      graphics.DrawImageUnscaled(miniImages[si], pos);
                   }
                }
@@ -684,7 +684,7 @@ public static class ImageProcessor
          Rectangle destRect = new Rectangle((int)((resultDimensions.width / 2f) - (width / 2f)), 0, width, height);
 
          Bitmap temp = new Bitmap(resultDimensions.width, resultDimensions.height);
-         temp.SetResolution(image.HorizontalResolution, image.VerticalResolution);
+         //temp.SetResolution(image.HorizontalResolution, image.VerticalResolution);
          using (var graphics = Graphics.FromImage(temp))
          {
             graphics.CompositingMode = CompositingMode.SourceCopy;
