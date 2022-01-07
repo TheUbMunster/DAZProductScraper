@@ -677,15 +677,15 @@ public static class ImageProcessor
 #else
       (int width, int height) resultDimensions = DAZScraperModel.FetchConfig.GetResolution(DAZScraperModel.fetchConfig.Resolution);
       using (MemoryStream ms = new MemoryStream(imageData))
-      using (Image image = Image.FromStream(ms))
+      using (Image before = Image.FromStream(ms))
       {
          int height = resultDimensions.height;
-         int width = (int)Math.Floor((float)image.Width * ((float)resultDimensions.height / (float)image.Height));
+         int width = (int)Math.Floor((float)before.Width * ((float)resultDimensions.height / (float)before.Height));
          Rectangle destRect = new Rectangle((int)((resultDimensions.width / 2f) - (width / 2f)), 0, width, height);
 
-         Bitmap temp = new Bitmap(resultDimensions.width, resultDimensions.height);
+         Bitmap after = new Bitmap(resultDimensions.width, resultDimensions.height);
          //temp.SetResolution(image.HorizontalResolution, image.VerticalResolution);
-         using (var graphics = Graphics.FromImage(temp))
+         using (var graphics = Graphics.FromImage(after))
          {
             graphics.CompositingMode = CompositingMode.SourceCopy;
             graphics.CompositingQuality = CompositingQuality.HighQuality;
@@ -696,14 +696,14 @@ public static class ImageProcessor
             using (var wrapMode = new ImageAttributes())
             {
                wrapMode.SetWrapMode(WrapMode.TileFlipXY);
-               graphics.DrawImage(image, destRect, 0, 0, image.Width, image.Height, GraphicsUnit.Pixel, wrapMode);
+               graphics.DrawImage(before, destRect, 0, 0, before.Width, before.Height, GraphicsUnit.Pixel, wrapMode);
             }
          }
 
          ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(x => x.FormatID == ImageFormat.Jpeg.Guid);
          EncoderParameters encParam = new EncoderParameters(1);
          encParam.Param[0] = new EncoderParameter(Encoder.Quality, DAZScraperModel.fetchConfig.JpgQuality);
-         temp.Save(FetchConfig.GetLibrarySaveDirectory() + "\\" + fileName + "-0.jpg", codec, encParam);
+         after.Save(FetchConfig.GetLibrarySaveDirectory() + "\\" + fileName + "-0.jpg", codec, encParam);
       }
 #endif
    }
