@@ -87,7 +87,7 @@ public static class ImageProcessor
 #endif
 
          int smallImageUncheckedCount = imageUrls.Length - 1;
-         (int width, int height) resultDimensions = DAZScraperModel.FetchConfig.GetResolution(DAZScraperModel.fetchConfig.Resolution);
+         (int width, int height) resultDimensions = DAZScraperModel.Config.GetResolution(DAZScraperModel.fetchConfig.Resolution);
 
 #if IMAGESHARP_IMAGE_PROCESSING
          List<Image<Rgb24>> miniImages = new List<Image<Rgb24>>();
@@ -440,7 +440,7 @@ public static class ImageProcessor
                ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(cd => cd.FormatID == ImageFormat.Jpeg.Guid);
                EncoderParameters encParam = new EncoderParameters(1);
                encParam.Param[0] = new EncoderParameter(Encoder.Quality, DAZScraperModel.fetchConfig.JpgQuality);
-               mainImage.Save(FetchConfig.GetLibrarySaveDirectory() + "\\" + fileName + "-0.jpg", codec, encParam);
+               mainImage.Save(Config.GetLibrarySaveDirectory() + "\\" + fileName + "-0.jpg", codec, encParam);
 #endif
             }
             return; //if we just made an image we're done, else if no mini images, no main image, do nothing.
@@ -620,7 +620,7 @@ public static class ImageProcessor
             ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(x => x.FormatID == ImageFormat.Jpeg.Guid);
             EncoderParameters encParam = new EncoderParameters(1);
             encParam.Param[0] = new EncoderParameter(Encoder.Quality, DAZScraperModel.fetchConfig.JpgQuality);
-            resultImages[i].Save(FetchConfig.GetLibrarySaveDirectory() + "\\" + fileName + $"-{i}.jpg", codec, encParam);
+            resultImages[i].Save(Config.GetLibrarySaveDirectory() + "\\" + fileName + $"-{i}.jpg", codec, encParam);
 #endif
             resultImages[i].Dispose();
 #if DEBUG
@@ -675,7 +675,7 @@ public static class ImageProcessor
          }
       }
 #else
-      (int width, int height) resultDimensions = DAZScraperModel.FetchConfig.GetResolution(DAZScraperModel.fetchConfig.Resolution);
+      (int width, int height) resultDimensions = DAZScraperModel.Config.GetResolution(DAZScraperModel.fetchConfig.Resolution);
       using (MemoryStream ms = new MemoryStream(imageData))
       using (Image before = Image.FromStream(ms))
       {
@@ -703,7 +703,7 @@ public static class ImageProcessor
          ImageCodecInfo codec = ImageCodecInfo.GetImageEncoders().FirstOrDefault(x => x.FormatID == ImageFormat.Jpeg.Guid);
          EncoderParameters encParam = new EncoderParameters(1);
          encParam.Param[0] = new EncoderParameter(Encoder.Quality, DAZScraperModel.fetchConfig.JpgQuality);
-         after.Save(FetchConfig.GetLibrarySaveDirectory() + "\\" + fileName + "-0.jpg", codec, encParam);
+         after.Save(Config.GetLibrarySaveDirectory() + "\\" + fileName + "-0.jpg", codec, encParam);
       }
 #endif
    }

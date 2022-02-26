@@ -38,8 +38,14 @@ public static class DAZScraperModel
     * Request limiting so we don't ddos things 
     */
 
-   public class FetchConfig
+   public class Config
    {
+      static Config()
+      {
+         //assure data folders exist.
+         MakeDirs();
+      }
+
       public enum ThumbnailResolution
       {
          R480p = 0,
@@ -51,6 +57,7 @@ public static class DAZScraperModel
 
       private const string RootSaveDirectory = "DAZProductScraper_Data";
       private const string LibrarySaveDirectory = "Data_Library";
+      private const string SortingSaveDirectory = "Sorted_Library";
 
       public ThumbnailResolution Resolution { get; set; } = ThumbnailResolution.R1080p;
       public int JpgQuality { get; set; } = 75;
@@ -77,14 +84,32 @@ public static class DAZScraperModel
          }
       }
 
-      public static string GetRootFilePath()
+      public static void MakeDirs()
+      {
+         Directory.CreateDirectory(GetRootFolderPath());
+         Directory.CreateDirectory(GetLibrarySaveDirectory());
+         Directory.CreateDirectory(GetSortingSaveDirectory());
+      }
+
+      public static void RefreshDirs()
+      {
+         Directory.Delete(GetRootFolderPath(), true);
+         MakeDirs();
+      }
+
+      public static string GetRootFolderPath()
       {
          return Path.GetFullPath(RootSaveDirectory);
       }
 
       public static string GetLibrarySaveDirectory()
       {
-         return Path.GetFullPath(LibrarySaveDirectory);
+         return Path.GetFullPath(RootSaveDirectory + "\\" + LibrarySaveDirectory);
+      }
+
+      public static string GetSortingSaveDirectory()
+      {
+         return Path.GetFullPath(RootSaveDirectory + "\\" + SortingSaveDirectory);
       }
       #endregion
    }
@@ -143,13 +168,14 @@ public static class DAZScraperModel
             doc.LoadHtml(await wc.DownloadStringTaskAsync(productPageURL));
             imageUrls = doc.DocumentNode.SelectNodes("//img[@class=\"zoomable\"]").Select(x => x.GetAttributeValue("data-fancybox-href", null))?.ToArray();
             productDescription = doc.DocumentNode.SelectSingleNode(@"//div[contains(concat(' ', normalize-space(@class), ' '), ' box-collateral ') and 
-contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.InnerText?.Trim();
-            //ignore the child of the above select single node with classes "data data_for_notes"
+contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.InnerText?.Trim() ?? string.Empty;
+            productDescription = productDescription?.Substring(0, productDescription.LastIndexOf("\nNotes\n") + 1) ?? string.Empty;
+            //if the above substring doesn't work, ignore the child of the above select single node with classes "data data_for_notes"
 
             productDescription = WebUtility.HtmlDecode(productDescription);
             if (imageUrls != null)
             {
-               base64Image = null; //we don't need this anymore.
+               base64Image = null; //we don't need this anymore. (however, maybe use this as a fallback?)
             }
          }
          catch
@@ -189,7 +215,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
 
    public const int maxConcurrencyIO = 10;
 
-   public static FetchConfig fetchConfig = new FetchConfig() { Resolution = FetchConfig.ThumbnailResolution.R2160p, JpgQuality = 80 };
+   public static Config fetchConfig = new Config() { Resolution = Config.ThumbnailResolution.R2160p, JpgQuality = 80 };
 
    //private static State currentState;
 
@@ -291,9 +317,9 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
       return await GetProductsIds();
    }
 
-   public static async Task Generate(List<string> ids)
+   public static async Task Generate(List<string> ids, bool overwriteExisting = true)
    {
-      await GenerateData(ids);
+      await GenerateData(ids, overwriteExisting);
    }
 
    /// <summary>
@@ -314,7 +340,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
 #endif
          ,
          ExecutablePath = revInfo.ExecutablePath,
-         Timeout = 5000
+         Timeout = 5000,
       });
    }
 
@@ -324,7 +350,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    /// <param name="completionCallback">Called when the browser is at the login page</param>
    private static async Task NavigateToLogin(bool newPage = true)
    {
-      if (newPage) 
+      if (newPage)
       {
          webpage = await browser.NewPageAsync();
       }
@@ -399,8 +425,10 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    /// </summary>
    /// <param name="ids">The product ids to generate the data for</param>
    /// <param name="completionCallback">Called when all the data has been generated.</param>
-   private static async Task GenerateData(List<string> ids)
+   private static async Task GenerateData(List<string> ids, bool overwriteExisting = true)
    {
+      //to make this faster, sort it in a way and write a comparison for a binary search
+      List<string> existingFiles = new List<string>(Directory.EnumerateFiles(Config.GetLibrarySaveDirectory()));
       //ids = new List<string>
       //{
       //   //"81647",
@@ -428,21 +456,53 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
                   ProductInfoFetch fetch = new ProductInfoFetch(id);
                   await fetch.FetchData();
                   //Screenshotter.ScreenshotRequest ssr;
-                  Console.WriteLine("Starting one image...");
-                  if (fetch.imageUrls != null)
+                  IEnumerable<string> imageFileMatches = existingFiles.Where(x => Regex.IsMatch(x, $"_{fetch.productID}-\\d+.jpg")); //this is slow (binary search w/ regex somehow?)
+                  if (!imageFileMatches.Any() || overwriteExisting)
                   {
-                     //ssr = new Screenshotter.ScreenshotRequest(fetch.cleanedProductName, fetch.imageUrls);
-                     await ImageProcessor.GenerateImage(fetch.imageUrls, fetch.cleanedProductName, 9, 100, 3);
+                     Console.Write("Starting one image... ");
+                     if (overwriteExisting)
+                     {
+                        //we're overwriting (regardless if the files exist or not)
+                        Console.WriteLine($"going to write/overwrite for product {fetch.productID}");
+                     }
+                     else
+                     {
+                        //there must have been no files
+                        Console.WriteLine($"going to write product {fetch.productID}");
+                     }
+                     //delete all files currently there
+                     foreach (string file in imageFileMatches)
+                     {
+                        File.Delete(file);
+                     }
+                     if (fetch.imageUrls != null)
+                     {
+                        //ssr = new Screenshotter.ScreenshotRequest(fetch.cleanedProductName, fetch.imageUrls);
+                        await ImageProcessor.GenerateImage(fetch.imageUrls, fetch.cleanedProductName + $"_{fetch.productID}", 9, 100, 3);
+                     }
+                     else if (fetch.base64Image != null)
+                     {
+                        //ssr = new Screenshotter.ScreenshotRequest(fetch.cleanedProductName, fetch.base64Image);
+                        await ImageProcessor.GenerateImage(fetch.base64Image, fetch.cleanedProductName + $"_{fetch.productID}");
+                     }
+                     else
+                     {
+                        Console.WriteLine($"Couldn't find any image data for {fetch.productID + " : " + (string.IsNullOrWhiteSpace(fetch.cleanedProductName) ? "no product name found" : fetch.cleanedProductName)}");
+                     }
                   }
-                  else if (fetch.base64Image != null)
+                  IEnumerable<string> textFileMatches = existingFiles.Where(x => Regex.IsMatch(x, $"_{fetch.productID}.txt"));
+                  if (textFileMatches.Count() > 1)
                   {
-                     //ssr = new Screenshotter.ScreenshotRequest(fetch.cleanedProductName, fetch.base64Image);
-                     await ImageProcessor.GenerateImage(fetch.base64Image, fetch.cleanedProductName);
+                     Console.WriteLine($"Found more than one text file for product {fetch.productID}");
                   }
-                  else
+                  if (!textFileMatches.Any() || overwriteExisting)
                   {
-                     Console.WriteLine($"Couldn't find any image data for {fetch.productID + " : " + fetch.cleanedProductName ?? "no product name found"}");
+                     foreach (string file in textFileMatches)
+                     {
+                        File.Delete(file);
+                     }
                   }
+                  File.WriteAllText(Config.GetLibrarySaveDirectory() + "\\" + fetch.cleanedProductName + $"_{fetch.productID}.txt", fetch.productDescription);
                   //ssr.Calculate().Wait(); //1 at a time of the 10
                   //Screenshotter.AddScreenshotRequest(ssr);
                   semaphore.Release();

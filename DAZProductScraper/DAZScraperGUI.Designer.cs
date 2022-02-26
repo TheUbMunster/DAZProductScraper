@@ -111,6 +111,7 @@ namespace DAZProductScraper
          this.clearDatabaseButton.TabIndex = 2;
          this.clearDatabaseButton.Text = "Clear Database";
          this.clearDatabaseButton.UseVisualStyleBackColor = true;
+         this.clearDatabaseButton.Click += new System.EventHandler(this.clearDatabaseButton_Click);
          // 
          // rebuildDatabaseButton
          // 
@@ -122,6 +123,7 @@ namespace DAZProductScraper
          this.rebuildDatabaseButton.TabIndex = 0;
          this.rebuildDatabaseButton.Text = "Rebuild Database";
          this.rebuildDatabaseButton.UseVisualStyleBackColor = true;
+         this.rebuildDatabaseButton.Click += new System.EventHandler(this.rebuildDatabaseButton_Click);
          // 
          // updateDatabseButton
          // 
@@ -133,6 +135,7 @@ namespace DAZProductScraper
          this.updateDatabseButton.TabIndex = 1;
          this.updateDatabseButton.Text = "Update Database";
          this.updateDatabseButton.UseVisualStyleBackColor = true;
+         this.updateDatabseButton.Click += new System.EventHandler(this.updateDatabseButton_Click);
          // 
          // keywordSortingLayoutPanel
          // 

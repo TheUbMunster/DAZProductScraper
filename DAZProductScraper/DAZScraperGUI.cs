@@ -32,7 +32,6 @@ namespace DAZProductScraper
       {
          InitializeComponent();
          Application.ApplicationExit += Application_ApplicationExit;
-         Directory.CreateDirectory(DAZScraperModel.FetchConfig.GetLibrarySaveDirectory());
          //FormClosed += (a, b) => Application_ApplicationExit(a, b);
       }
 
@@ -141,7 +140,7 @@ namespace DAZProductScraper
       private async void OnLoginSuccess()
       {
          await DAZScraperModel.NavigateToProductsPage();
-         await DAZScraperModel.Generate(await DAZScraperModel.FetchIds());
+         //await DAZScraperModel.Generate(await DAZScraperModel.FetchIds());
       }
 
       private void Application_ApplicationExit(object sender, EventArgs e)
@@ -149,16 +148,74 @@ namespace DAZProductScraper
          DAZScraperModel.OnApplicationQuit();
       }
 
-      private void openRootFolderButton_Click(object sender, EventArgs e)
+      private void OpenSignificantFolder(string selection = null)
       {
-         string p = DAZScraperModel.FetchConfig.GetLibrarySaveDirectory();
-         Directory.CreateDirectory(p);
+         selection = selection ?? DAZScraperModel.Config.GetLibrarySaveDirectory();
          ProcessStartInfo si = new ProcessStartInfo
          {
-            Arguments = p,
+            Arguments = selection,
             FileName = "explorer.exe"
          };
          Process.Start(si);
+      }
+
+      private void LockManipulators()
+      {
+         rebuildDatabaseButton.Enabled = false;
+         updateDatabseButton.Enabled = false;
+         clearDatabaseButton.Enabled = false;
+         createKeywordFolderButton.Enabled = false;
+         editKeywordFolderButton.Enabled = false;
+         refreshKeywordFoldersButton.Enabled = false;
+         deleteKeywordFolderButton.Enabled = false;
+      }
+
+      private void UnlockManipulators()
+      {
+         rebuildDatabaseButton.Enabled = true;
+         updateDatabseButton.Enabled = true;
+         clearDatabaseButton.Enabled = true;
+         createKeywordFolderButton.Enabled = true;
+         editKeywordFolderButton.Enabled = true;
+         refreshKeywordFoldersButton.Enabled = true;
+         deleteKeywordFolderButton.Enabled = true;
+      }
+
+      private void openRootFolderButton_Click(object sender, EventArgs e)
+      {
+         OpenSignificantFolder();
+      }
+
+      private void rebuildDatabaseButton_Click(object sender, EventArgs e)
+      {
+         RebuildDatabase();
+      }
+
+      private async void RebuildDatabase()
+      {
+         LockManipulators();
+         DAZScraperModel.Config.RefreshDirs();
+         await DAZScraperModel.Generate(await DAZScraperModel.FetchIds(), true);
+         UnlockManipulators();
+      }
+
+      private void updateDatabseButton_Click(object sender, EventArgs e)
+      {
+         UpdateDatabase();
+      }
+
+      private async void UpdateDatabase()
+      {
+         LockManipulators();
+         await DAZScraperModel.Generate(await DAZScraperModel.FetchIds(), false);
+         UnlockManipulators();
+      }
+
+      private void clearDatabaseButton_Click(object sender, EventArgs e)
+      {
+         LockManipulators();
+         DAZScraperModel.Config.RefreshDirs();
+         UnlockManipulators();
       }
    }
 }
