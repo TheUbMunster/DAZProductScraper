@@ -141,6 +141,7 @@ namespace DAZProductScraper
          this.MaximizeBox = false;
          this.MinimizeBox = false;
          this.Name = "LoginPopup";
+         this.ShowIcon = false;
          this.ShowInTaskbar = false;
          this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
          this.Text = "Login to DAZ";

@@ -91,7 +91,7 @@ public static class DAZScraperModel
          Directory.CreateDirectory(GetSortingSaveDirectory());
       }
 
-      public static void RefreshDirs()
+      public static void ResetDirs()
       {
          Directory.Delete(GetRootFolderPath(), true);
          MakeDirs();

@@ -289,6 +289,7 @@ namespace DAZProductScraper
          this.openKeywordFolderButton.TabIndex = 8;
          this.openKeywordFolderButton.Text = "Open Keyword Folder";
          this.openKeywordFolderButton.UseVisualStyleBackColor = true;
+         this.openKeywordFolderButton.Click += new System.EventHandler(this.openKeywordFolderButton_Click);
          // 
          // helpButton
          // 

@@ -41,6 +41,7 @@ namespace DAZProductScraper
          {
             var pp = new LoginPopup();
             pp.onClickLogin += OnLoginSubmit;
+            pp.PrintInfoToConsoleBox("Loading the browser...", LoginPopup.ConsoleBoxColor.Grey, true);
             Task.Run(async () =>
             {
                await DAZScraperModel.InitBrowser();
@@ -48,8 +49,7 @@ namespace DAZProductScraper
                pp.Invoke(new Action(() => pp.SetLoginButtonState(true)));
                pp.Invoke(new Action(() => pp.PrintInfoToConsoleBox("Browser loaded.", LoginPopup.ConsoleBoxColor.Green, true)));
             });
-            pp.PrintInfoToConsoleBox("Loading the browser...", LoginPopup.ConsoleBoxColor.Grey, true);
-            pp.ShowDialog(this); //pp.Show(this);
+            pp.ShowDialog(this); //pp.Show(this); //this has to come last because it freezes the parent control.
          }));
       }
 
@@ -148,17 +148,6 @@ namespace DAZProductScraper
          DAZScraperModel.OnApplicationQuit();
       }
 
-      private void OpenSignificantFolder(string selection = null)
-      {
-         selection = selection ?? DAZScraperModel.Config.GetLibrarySaveDirectory();
-         ProcessStartInfo si = new ProcessStartInfo
-         {
-            Arguments = selection,
-            FileName = "explorer.exe"
-         };
-         Process.Start(si);
-      }
-
       private void LockManipulators()
       {
          rebuildDatabaseButton.Enabled = false;
@@ -183,7 +172,12 @@ namespace DAZProductScraper
 
       private void openRootFolderButton_Click(object sender, EventArgs e)
       {
-         OpenSignificantFolder();
+         ProcessStartInfo si = new ProcessStartInfo
+         {
+            Arguments = DAZScraperModel.Config.GetLibrarySaveDirectory(),
+            FileName = "explorer.exe"
+         };
+         Process.Start(si);
       }
 
       private void rebuildDatabaseButton_Click(object sender, EventArgs e)
@@ -194,7 +188,7 @@ namespace DAZProductScraper
       private async void RebuildDatabase()
       {
          LockManipulators();
-         DAZScraperModel.Config.RefreshDirs();
+         DAZScraperModel.Config.ResetDirs();
          await DAZScraperModel.Generate(await DAZScraperModel.FetchIds(), true);
          UnlockManipulators();
       }
@@ -214,8 +208,14 @@ namespace DAZProductScraper
       private void clearDatabaseButton_Click(object sender, EventArgs e)
       {
          LockManipulators();
-         DAZScraperModel.Config.RefreshDirs();
+         DAZScraperModel.Config.ResetDirs();
          UnlockManipulators();
+      }
+
+      private void openKeywordFolderButton_Click(object sender, EventArgs e)
+      {
+         var pp = new OpenFolderPopup(DAZScraperModel.Config.GetSortingSaveDirectory());
+         pp.ShowDialog();
       }
    }
 }
