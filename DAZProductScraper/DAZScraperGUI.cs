@@ -217,5 +217,17 @@ namespace DAZProductScraper
          var pp = new OpenFolderPopup(DAZScraperModel.Config.GetSortingSaveDirectory());
          pp.ShowDialog();
       }
+
+      private void createKeywordFolderButton_Click(object sender, EventArgs e)
+      {
+         var pp = new CreateFolderPopup(DAZScraperModel.Config.GetLibrarySaveDirectory(), DAZScraperModel.Config.GetSortingSaveDirectory());
+         pp.ShowDialog();
+      }
+
+      private void editKeywordFolderButton_Click(object sender, EventArgs e)
+      {
+         var pp = new CreateFolderPopup(DAZScraperModel.Config.GetLibrarySaveDirectory(), DAZScraperModel.Config.GetSortingSaveDirectory(), );
+         pp.ShowDialog();
+      }
    }
 }

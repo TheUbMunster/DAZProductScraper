@@ -214,6 +214,7 @@ namespace DAZProductScraper
          this.createKeywordFolderButton.TabIndex = 3;
          this.createKeywordFolderButton.Text = "Create Keyword Folder";
          this.createKeywordFolderButton.UseVisualStyleBackColor = true;
+         this.createKeywordFolderButton.Click += new System.EventHandler(this.createKeywordFolderButton_Click);
          // 
          // editKeywordFolderButton
          // 
@@ -225,6 +226,7 @@ namespace DAZProductScraper
          this.editKeywordFolderButton.TabIndex = 5;
          this.editKeywordFolderButton.Text = "Edit Keyword Folder";
          this.editKeywordFolderButton.UseVisualStyleBackColor = true;
+         this.editKeywordFolderButton.Click += new System.EventHandler(this.editKeywordFolderButton_Click);
          // 
          // tableLayoutPanel1
          // 

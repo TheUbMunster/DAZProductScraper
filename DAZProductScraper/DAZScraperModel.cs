@@ -453,6 +453,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
                string id = ids[j]; //closeure not capturing the right index? (don't put this inside the startnew task it's bad).
                fetches.Add(Task.Run(async () =>
                {
+                  //add pid check before the fetch
                   ProductInfoFetch fetch = new ProductInfoFetch(id);
                   await fetch.FetchData();
                   //Screenshotter.ScreenshotRequest ssr;
