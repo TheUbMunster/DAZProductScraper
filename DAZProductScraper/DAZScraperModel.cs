@@ -61,8 +61,8 @@ public static class DAZScraperModel
 
       public ThumbnailResolution Resolution { get; set; } = ThumbnailResolution.R1080p;
       public int JpgQuality { get; set; } = 75;
-      public int ImageSaveConcurrency { get; set; } = 1;
-      public int ImageFetchConcurrency { get; set; } = 2;
+      //public int ImageSaveConcurrency { get; set; } = 1;
+      public int ImageFetchConcurrency { get; set; } = 10;
 
       #region Static Helpers
       public static (int width, int height) GetResolution(ThumbnailResolution res)
@@ -213,7 +213,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    const string userLoginUrl = domain + "/customer/account/login";
    const string userProductPageUrl = domain + "/downloader/customer/files";
 
-   public const int maxConcurrencyIO = 10;
+   //public const int maxConcurrencyIO = 10;
 
    public static Config fetchConfig = new Config() { Resolution = Config.ThumbnailResolution.R2160p, JpgQuality = 80 };
 
@@ -222,6 +222,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    private static Browser browser;
    private static Page webpage;
    public static CancellationTokenSource programwideCancellation = new CancellationTokenSource();
+   public static event Action<string, int, bool> LogInfo; //info, color, clearPrevious.
 
    public static string email, pass;
 
@@ -342,6 +343,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
          ExecutablePath = revInfo.ExecutablePath,
          Timeout = 5000,
       });
+      LogInfo?.Invoke("Launched browser", 5, false);
    }
 
    /// <summary>
@@ -357,7 +359,9 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
 #if DEBUG
       await webpage.SetViewportAsync(new ViewPortOptions() { Width = 1920, Height = 1080 });
 #endif
+      LogInfo?.Invoke("Going to login page", 5, false);
       await webpage.GoToAsync(userLoginUrl);
+      LogInfo?.Invoke("At login page", 5, false);
    }
 
    /// <summary>
@@ -380,6 +384,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
       await form.EvaluateFunctionAsync(loginJs);
       ElementHandle sendButton = await webpage.WaitForSelectorAsync("#send2");
       await sendButton.EvaluateFunctionAsync("(x) => x.click()");
+      LogInfo?.Invoke("Attempting login", 5, false);
       Response resp = await webpage.WaitForNavigationAsync(new NavigationOptions() { Timeout = 5000 });
       //Response resp = await webpage.GoToAsync("https://www.daz3d.com/customer/account/loginPost/"); //internalservererror even if you login correctly
       //Console.WriteLine("OK?: " + redirResponse.Ok);
@@ -392,7 +397,9 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    /// <param name="completionCallback">Called when the webpage is directed to the product page</param>
    private static async Task GoToProductsPage()
    {
+      LogInfo?.Invoke("Going to product page", 5, true);
       await webpage.GoToAsync(userProductPageUrl);
+      LogInfo?.Invoke("At product page", 5, false);
    }
 
    /// <summary>
@@ -401,6 +408,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    /// <param name="completionCallback">Called when the ids are loaded</param>
    private static async Task<List<string>> GetProductsIds()
    {
+      LogInfo?.Invoke("Getting product ids", 5, false);
       ElementHandle productList = await webpage.WaitForSelectorAsync("#product_list");
       string getProductIds = @"function getProductIds(root)
 {
@@ -427,6 +435,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    /// <param name="completionCallback">Called when all the data has been generated.</param>
    private static async Task GenerateData(List<string> ids, bool overwriteExisting = true)
    {
+      LogInfo?.Invoke("Generating/fetching description and image data", 1, true);
       //to make this faster, sort it in a way and write a comparison for a binary search
       List<string> existingFiles = new List<string>(Directory.EnumerateFiles(Config.GetLibrarySaveDirectory()));
       //ids = new List<string>
@@ -439,37 +448,36 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
       //   //"82662",
       //   //"56001",
       //};
-      using (SemaphoreSlim semaphore = new SemaphoreSlim(maxConcurrencyIO, maxConcurrencyIO))
-      //using (SemaphoreSlim semaphore = new SemaphoreSlim(1, 1))
+      using (SemaphoreSlim semaphore = new SemaphoreSlim(fetchConfig.ImageFetchConcurrency, fetchConfig.ImageFetchConcurrency)) //switch this over to config.
       {
          List<Task> fetches = new List<Task>();
          const int amountPerSlam = 200;
-         Console.WriteLine("Total number of products: " + ids.Count);
+         LogInfo?.Invoke($"Total number of products: {ids.Count}", 5, false);
          for (int i = 0; i < ids.Count; i += amountPerSlam)
          {
+            if (i != 0)
+               LogInfo?.Invoke("Done taking a break, resuming now.", 5, false);
             for (int j = i; j < (i + amountPerSlam < ids.Count ? i + amountPerSlam : ids.Count); j++)
             {
                await semaphore.WaitAsync(); //10 at a time
                string id = ids[j]; //closeure not capturing the right index? (don't put this inside the startnew task it's bad).
                fetches.Add(Task.Run(async () =>
                {
-                  //add pid check before the fetch
-                  ProductInfoFetch fetch = new ProductInfoFetch(id);
-                  await fetch.FetchData();
-                  //Screenshotter.ScreenshotRequest ssr;
-                  IEnumerable<string> imageFileMatches = existingFiles.Where(x => Regex.IsMatch(x, $"_{fetch.productID}-\\d+.jpg")); //this is slow (binary search w/ regex somehow?)
-                  if (!imageFileMatches.Any() || overwriteExisting)
+                  IEnumerable<string> imageFileMatches = existingFiles.Where(x => Regex.IsMatch(x, $"_{id}-\\d+.jpg")); //this is slow (binary search w/ regex somehow?)
+                  if (!imageFileMatches.Any() || overwriteExisting) //no images or overwrite
                   {
-                     Console.Write("Starting one image... ");
+                     ProductInfoFetch fetch = new ProductInfoFetch(id);
+                     await fetch.FetchData();
+                     LogInfo?.Invoke("Starting one image...", 5, false);
                      if (overwriteExisting)
                      {
                         //we're overwriting (regardless if the files exist or not)
-                        Console.WriteLine($"going to write/overwrite for product {fetch.productID}");
+                        LogInfo?.Invoke($"going to write/overwrite for product {fetch.productID}", 5, false);
                      }
                      else
                      {
                         //there must have been no files
-                        Console.WriteLine($"going to write product {fetch.productID}");
+                        LogInfo?.Invoke($"going to write product {fetch.productID}", 5, false);
                      }
                      //delete all files currently there
                      foreach (string file in imageFileMatches)
@@ -488,22 +496,22 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
                      }
                      else
                      {
-                        Console.WriteLine($"Couldn't find any image data for {fetch.productID + " : " + (string.IsNullOrWhiteSpace(fetch.cleanedProductName) ? "no product name found" : fetch.cleanedProductName)}");
+                        LogInfo?.Invoke($"Couldn't find any image data for {fetch.productID + " : " + (string.IsNullOrWhiteSpace(fetch.cleanedProductName) ? "no product name found" : fetch.cleanedProductName)}", 5, false);
                      }
-                  }
-                  IEnumerable<string> textFileMatches = existingFiles.Where(x => Regex.IsMatch(x, $"_{fetch.productID}.txt"));
-                  if (textFileMatches.Count() > 1)
-                  {
-                     Console.WriteLine($"Found more than one text file for product {fetch.productID}");
-                  }
-                  if (!textFileMatches.Any() || overwriteExisting)
-                  {
-                     foreach (string file in textFileMatches)
+                     IEnumerable<string> textFileMatches = existingFiles.Where(x => Regex.IsMatch(x, $"_{id}.txt"));
+                     if (textFileMatches.Count() > 1)
                      {
-                        File.Delete(file);
+                        LogInfo?.Invoke($"Found more than one text file for product {id}", 5, false);
                      }
+                     if (!textFileMatches.Any() || overwriteExisting)
+                     {
+                        foreach (string file in textFileMatches)
+                        {
+                           File.Delete(file);
+                        }
+                     }
+                     File.WriteAllText(Config.GetLibrarySaveDirectory() + "\\" + fetch.cleanedProductName + $"_{id}.txt", fetch.productDescription);
                   }
-                  File.WriteAllText(Config.GetLibrarySaveDirectory() + "\\" + fetch.cleanedProductName + $"_{fetch.productID}.txt", fetch.productDescription);
                   //ssr.Calculate().Wait(); //1 at a time of the 10
                   //Screenshotter.AddScreenshotRequest(ssr);
                   semaphore.Release();
@@ -513,7 +521,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
             {
                break; //if the next i loop iteration would put us past the end then don't bother waiting 2 more minutes.
             }
-            Console.WriteLine("Giving the server a break..."); // this might be an issue for when we have less than 2000 products anyways
+            LogInfo?.Invoke("Giving the server a break... (We don't want to DDOS here)", 5, false);
             await Task.Delay(1000 * 90);
          }
          await Task.WhenAll(fetches);

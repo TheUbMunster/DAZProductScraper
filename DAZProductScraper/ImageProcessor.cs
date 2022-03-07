@@ -75,7 +75,7 @@ public static class ImageProcessor
       try
       {
          #region local declarations
-         const int ioConcurrency = 4;
+         const int ioConcurrency = 2;
 
 #if IMAGESHARP_IMAGE_PROCESSING
          Configuration config = new Configuration(new PngConfigurationModule(), new JpegConfigurationModule());
@@ -632,7 +632,9 @@ public static class ImageProcessor
       }
       catch (Exception e)
       {
-         Console.WriteLine("A bad thing occurred in the ImageProcessor. \n\n" + e.GetType().ToString() + " : " + e.Message + "\n\n" + e.StackTrace);
+         //TODO, ADD THIS TO THE LOG.
+         //DAZScraperModel.LogInfo?.Invoke("A bad thing occurred in the ImageProcessor. \n\n" + e.GetType().ToString() + " : " + e.Message + "\n\n" + e.StackTrace, 3, false);
+         //Console.WriteLine();
       }
    }
 

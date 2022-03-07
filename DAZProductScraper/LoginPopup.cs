@@ -76,7 +76,7 @@ namespace DAZProductScraper
                c = Color.Black;
                break;
          }
-         //conditional call instanceOfSomething.?[boolean condition expression]MemberFunction();
+         //conditional call instanceOfSomething.?[boolean condition expression, default value if function not called]MemberFunction();
          if (clearPrior)
          {
             infoLogRT.Clear();

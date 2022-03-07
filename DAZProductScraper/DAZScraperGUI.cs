@@ -14,6 +14,17 @@ namespace DAZProductScraper
 {
    public partial class DAZScraperGUI : Form
    {
+      #region Typedefs
+      public enum ConsoleBoxColor
+      {
+         Green = 1,
+         Yellow,
+         Red,
+         Grey,
+         Black
+      }
+      #endregion
+
       /*
        * Add new products from Daz
        * Add sorting keyword folder
@@ -137,6 +148,46 @@ namespace DAZProductScraper
          });
       }
 
+      StringBuilder debugSB = new StringBuilder();
+      private bool firstPrintOccurred;
+      private void PrintInfoToConsoleBox(string info, ConsoleBoxColor color, bool clearPrior = false)
+      {
+         Color c;
+         switch (color)
+         {
+            case ConsoleBoxColor.Green:
+               c = Color.Green;
+               break;
+            case ConsoleBoxColor.Yellow:
+               c = Color.Yellow;
+               break;
+            case ConsoleBoxColor.Red:
+               c = Color.Red;
+               break;
+            case ConsoleBoxColor.Grey:
+               c = Color.Gray;
+               break;
+            default:
+            case ConsoleBoxColor.Black:
+               c = Color.Black;
+               break;
+         }
+         //conditional call instanceOfSomething.?[boolean condition expression, default value if function not called]MemberFunction();
+         if (clearPrior)
+         {
+            debugLogRTB.Clear();
+         }
+         else
+         {
+            firstPrintOccurred = true;
+         }
+         debugLogRTB.SelectionColor = c;
+         string temp = (firstPrintOccurred ? "\n" : "") + info;
+         debugLogRTB.AppendText(temp);
+         debugSB.Append(temp);
+         Console.Write(temp);
+      }
+
       private async void OnLoginSuccess()
       {
          await DAZScraperModel.NavigateToProductsPage();
@@ -145,6 +196,10 @@ namespace DAZProductScraper
 
       private void Application_ApplicationExit(object sender, EventArgs e)
       {
+         //dump log
+         DateTime now = DateTime.UtcNow;
+         File.WriteAllText($"debug_log_{now.ToShortDateString()}_{now.ToShortTimeString()}", debugSB.ToString());
+         //close model
          DAZScraperModel.OnApplicationQuit();
       }
 
@@ -166,7 +221,7 @@ namespace DAZProductScraper
          clearDatabaseButton.Enabled = true;
          createKeywordFolderButton.Enabled = true;
          editKeywordFolderButton.Enabled = true;
-         refreshKeywordFoldersButton.Enabled = true;
+         //refreshKeywordFoldersButton.Enabled = true; //not yet implemented
          deleteKeywordFolderButton.Enabled = true;
       }
 
@@ -218,6 +273,7 @@ namespace DAZProductScraper
 
       private void openKeywordFolderButton_Click(object sender, EventArgs e)
       {
+         LockManipulators();
          var pp = new OpenFolderPopup(DAZScraperModel.Config.GetSortingSaveDirectory());
          pp.ShowDialog();
          if (Directory.Exists(pp.OpenPath))
@@ -230,17 +286,21 @@ namespace DAZProductScraper
             Process.Start(si);
             pp.Dispose();
          }
+         UnlockManipulators();
       }
 
       private void createKeywordFolderButton_Click(object sender, EventArgs e)
       {
+         LockManipulators();
          var pp = new CreateFolderPopup(DAZScraperModel.Config.GetLibrarySaveDirectory(), DAZScraperModel.Config.GetSortingSaveDirectory());
          pp.ShowDialog();
          pp.Dispose();
+         UnlockManipulators();
       }
 
       private void editKeywordFolderButton_Click(object sender, EventArgs e)
       {
+         LockManipulators();
          var op = new OpenFolderPopup(DAZScraperModel.Config.GetSortingSaveDirectory(), OpenFolderPopup.OperationType.Edit);
          op.ShowDialog();
          op.Dispose();
@@ -250,10 +310,12 @@ namespace DAZProductScraper
             cp.ShowDialog();
             cp.Dispose();
          }
+         UnlockManipulators();
       }
 
       private void deleteKeywordFolderButton_Click(object sender, EventArgs e)
       {
+         LockManipulators();
          var op = new OpenFolderPopup(DAZScraperModel.Config.GetSortingSaveDirectory(), OpenFolderPopup.OperationType.Delete);
          op.ShowDialog();
          op.Dispose();
@@ -263,6 +325,7 @@ namespace DAZProductScraper
                Directory.Delete(op.OpenPath, true);
             File.Delete(op.OpenPath + ".txt");
          }
+         UnlockManipulators();
       }
    }
 }
