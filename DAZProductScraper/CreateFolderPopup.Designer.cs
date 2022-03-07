@@ -118,6 +118,8 @@ namespace DAZProductScraper
          this.ClientSize = new System.Drawing.Size(484, 141);
          this.Controls.Add(this.tableLayoutPanel);
          this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
+         this.MaximizeBox = false;
+         this.MinimizeBox = false;
          this.Name = "CreateFolderPopup";
          this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
          this.Text = "Create a Keyword Sorting Folder";

@@ -14,16 +14,47 @@ namespace DAZProductScraper
 {
    public partial class OpenFolderPopup : Form
    {
+      public enum OperationType
+      {
+         Open,
+         Edit,
+         Delete
+      }
+
       string parentFolderPath;
       string toOpen = null;
+      OperationType opType;
+      public string OpenPath { get => toOpen; }
       const string noFoldersMessage = "[You have no keyword sorting folders]";
 
-      public OpenFolderPopup(string parentFolderPath)
+      public OpenFolderPopup(string parentFolderPath, OperationType opType = OperationType.Open)
       {
          this.parentFolderPath = parentFolderPath;
          AcceptButton = openFolderButton;
          CancelButton = cancelButton;
+         this.opType = opType;
          InitializeComponent();
+         switch (opType)
+         {
+            case OperationType.Open:
+               Text = "Open a Keyword Sorting Folder";
+               openFolderButton.Text = "Open Folder";
+               folderComboBox.Text = "Select a keyword folder to open...";
+               break;
+            case OperationType.Edit:
+               Text = "Edit a Keyword Sorting Folder";
+               openFolderButton.Text = "Edit Folder";
+               folderComboBox.Text = "Select a keyword folder to edit...";
+               break;
+            case OperationType.Delete:
+               Text = "Delete a Keyword Sorting Folder";
+               openFolderButton.Text = "Delete Folder";
+               folderComboBox.Text = "Select a keyword folder to delete...";
+               break;
+            default:
+               throw new ArgumentException("only pass enum values");
+               break;
+         }
       }
 
       private void folderComboBox_OnDropDown(object sender, EventArgs e)
@@ -46,21 +77,21 @@ namespace DAZProductScraper
 
       private void cancelButton_Click(object sender, EventArgs e)
       {
+         toOpen = null;
          Close();
       }
 
       private void openFolderButton_Click(object sender, EventArgs e)
       {
-         if (toOpen != null && Directory.Exists(toOpen))
+         if (opType == OperationType.Delete && folderComboBox.SelectedItem != null)
          {
-            ProcessStartInfo si = new ProcessStartInfo
+            if (MessageBox.Show(this, $"Are you SURE you want to delete the keyword sorting folder \"{folderComboBox.SelectedItem}\"", 
+               "Delete a Keyword Sorting Folder", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.Cancel)
             {
-               Arguments = toOpen,
-               FileName = "explorer.exe"
-            };
-            Process.Start(si);
-            Close();
+               return;
+            }
          }
+         Close();
       }
    }
 }

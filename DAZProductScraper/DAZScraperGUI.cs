@@ -208,7 +208,11 @@ namespace DAZProductScraper
       private void clearDatabaseButton_Click(object sender, EventArgs e)
       {
          LockManipulators();
-         DAZScraperModel.Config.ResetDirs();
+         if (MessageBox.Show(this, $"Are you SURE you want to delete the ENTIRE local database? (Images, description files, sorting folders etc.)",
+               "Delete everything?", MessageBoxButtons.OKCancel, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) == DialogResult.OK)
+         {
+            DAZScraperModel.Config.ResetDirs();
+         }
          UnlockManipulators();
       }
 
@@ -216,18 +220,49 @@ namespace DAZProductScraper
       {
          var pp = new OpenFolderPopup(DAZScraperModel.Config.GetSortingSaveDirectory());
          pp.ShowDialog();
+         if (Directory.Exists(pp.OpenPath))
+         {
+            ProcessStartInfo si = new ProcessStartInfo
+            {
+               Arguments = pp.OpenPath,
+               FileName = "explorer.exe"
+            };
+            Process.Start(si);
+            pp.Dispose();
+         }
       }
 
       private void createKeywordFolderButton_Click(object sender, EventArgs e)
       {
          var pp = new CreateFolderPopup(DAZScraperModel.Config.GetLibrarySaveDirectory(), DAZScraperModel.Config.GetSortingSaveDirectory());
          pp.ShowDialog();
+         pp.Dispose();
       }
 
       private void editKeywordFolderButton_Click(object sender, EventArgs e)
       {
-         var pp = new CreateFolderPopup(DAZScraperModel.Config.GetLibrarySaveDirectory(), DAZScraperModel.Config.GetSortingSaveDirectory(), );
-         pp.ShowDialog();
+         var op = new OpenFolderPopup(DAZScraperModel.Config.GetSortingSaveDirectory(), OpenFolderPopup.OperationType.Edit);
+         op.ShowDialog();
+         op.Dispose();
+         if (op.OpenPath != null)
+         {
+            var cp = new CreateFolderPopup(DAZScraperModel.Config.GetLibrarySaveDirectory(), DAZScraperModel.Config.GetSortingSaveDirectory(), op.OpenPath.Substring(op.OpenPath.LastIndexOf('\\') + 1));
+            cp.ShowDialog();
+            cp.Dispose();
+         }
+      }
+
+      private void deleteKeywordFolderButton_Click(object sender, EventArgs e)
+      {
+         var op = new OpenFolderPopup(DAZScraperModel.Config.GetSortingSaveDirectory(), OpenFolderPopup.OperationType.Delete);
+         op.ShowDialog();
+         op.Dispose();
+         if (op.OpenPath != null)
+         {
+            if (Directory.Exists(op.OpenPath))
+               Directory.Delete(op.OpenPath, true);
+            File.Delete(op.OpenPath + ".txt");
+         }
       }
    }
 }

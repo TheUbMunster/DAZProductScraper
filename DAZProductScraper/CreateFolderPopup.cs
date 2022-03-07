@@ -21,6 +21,7 @@ namespace DAZProductScraper
 
       public CreateFolderPopup(string libraryPath, string sortingFolderRootPath, string selectedSortFolder = null)
       {
+         InitializeComponent();
          libPath = libraryPath;
          sortPath = sortingFolderRootPath;
          if (selectedSortFolder != null)
@@ -30,8 +31,8 @@ namespace DAZProductScraper
             nameTextBox.Enabled = false;
             createFolderButton.Text = "Overwrite Folder";
             enforceUniqueFilename = false;
+            Text = "Overwrite a Keyword Sorting Folder";
          }
-         InitializeComponent();
       }
 
       private void cancelButton_Click(object sender, EventArgs e)
@@ -41,17 +42,20 @@ namespace DAZProductScraper
 
       private void createFolderButton_Click(object sender, EventArgs e)
       {
-         AttemptCreateFolder(nameTextBox.Text.Trim(), paramsTextBox.Text);
-         Close();
+         bool success = AttemptCreateFolder(nameTextBox.Text.Trim(), paramsTextBox.Text);
+         if (success)
+         {
+            Close();
+         }
       }
 
-      private void AttemptCreateFolder(string name, string @params)
+      private bool AttemptCreateFolder(string name, string @params)
       {
          if (Directory.Exists($"{sortPath}\\{name}") && enforceUniqueFilename)
          {
             //deny, that name already exists.
             MessageBox.Show(this, "Error", "A sorting keyword folder already exists with that name", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return;
+            return false;
          }
          Regex validityRegex = new Regex("-\"(.+)\"");
          IEnumerable<string> args = validityRegex.Matches(@params).Cast<Match>().Select(x => x.Value.Trim());
@@ -64,7 +68,7 @@ namespace DAZProductScraper
          {
             //reject because the string isn't right
             MessageBox.Show(this, "Error", "The provided parameters were not parseable", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return;
+            return false;
          }
          StringBuilder pattern = new StringBuilder();
          foreach (string s in args)
@@ -82,9 +86,8 @@ namespace DAZProductScraper
             //reject because full regex is broken (this means some part of the regex isn't valid)
             //keep track of the regexes and what line they're on and report what line wasn't parseable
             MessageBox.Show(this, "Error", "The generated regular expression was not valid", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            return;
+            return false;
          }
-         System.IO.File.WriteAllText($"{sortPath}\\{name}.txt", @params);
          //foreach text file that matches the regex, add a shortcut to that pid's images
          HashSet<string> pidsToAdd = new HashSet<string>();
          Regex getPidFromFilename = new Regex(".+_(\\d+)\\.txt");
@@ -96,7 +99,7 @@ namespace DAZProductScraper
             }
          }
          if (Directory.Exists($"{sortPath}\\{name}"))
-            Directory.Delete("${sortPath}\\{name}", true);
+            Directory.Delete($"{sortPath}\\{name}", true);
          Directory.CreateDirectory($"{sortPath}\\{name}");
          Regex getImageFilename = new Regex(".+\\\\(.+_)(\\d+)(-\\d+)\\.jpg");
          foreach (string f in Directory.EnumerateFiles(libPath, "*.jpg")) //"*_[pid]-*.jpg"
@@ -112,6 +115,8 @@ namespace DAZProductScraper
                shortcut.Save();
             }
          }
+         System.IO.File.WriteAllText($"{sortPath}\\{name}.txt", @params);
+         return true;
       }
    }
 }
