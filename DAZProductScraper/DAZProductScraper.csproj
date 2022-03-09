@@ -155,6 +155,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BrowserService.cs" />
     <Compile Include="CreateFolderPopup.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -169,6 +170,7 @@
       <DependentUpon>DAZScraperGUI.cs</DependentUpon>
     </Compile>
     <Compile Include="ImageProcessor.cs" />
+    <Compile Include="Job.cs" />
     <Compile Include="LoginPopup.cs">
       <SubType>Form</SubType>
     </Compile>

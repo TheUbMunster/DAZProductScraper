@@ -43,6 +43,7 @@ namespace DAZProductScraper
       {
          InitializeComponent();
          Application.ApplicationExit += Application_ApplicationExit;
+         DAZScraperModel.LogInfo += (a, b, c) => Invoke(new Action(() => PrintInfoToConsoleBox(a, (ConsoleBoxColor)b, c)));
          //FormClosed += (a, b) => Application_ApplicationExit(a, b);
       }
 
@@ -55,12 +56,11 @@ namespace DAZProductScraper
             pp.PrintInfoToConsoleBox("Loading the browser...", LoginPopup.ConsoleBoxColor.Grey, true);
             Task.Run(async () =>
             {
-               await DAZScraperModel.InitBrowser();
+               //await DAZScraperModel.InitBrowser();
                await DAZScraperModel.GoToLogin();
-               pp.Invoke(new Action(() => pp.SetLoginButtonState(true)));
-               pp.Invoke(new Action(() => pp.PrintInfoToConsoleBox("Browser loaded.", LoginPopup.ConsoleBoxColor.Green, true)));
+               pp.Invoke(new Action(() => { pp.SetLoginButtonState(true); pp.PrintInfoToConsoleBox("Browser loaded.", LoginPopup.ConsoleBoxColor.Green, true); }));
             });
-            pp.ShowDialog(this); //pp.Show(this); //this has to come last because it freezes the parent control.
+            pp.ShowDialog(this); //pp.Show(this); //this has to come after the task because it freezes the parent control.
          }));
       }
 
@@ -176,6 +176,7 @@ namespace DAZProductScraper
          if (clearPrior)
          {
             debugLogRTB.Clear();
+            firstPrintOccurred = false;
          }
          else
          {
@@ -198,7 +199,7 @@ namespace DAZProductScraper
       {
          //dump log
          DateTime now = DateTime.UtcNow;
-         File.WriteAllText($"debug_log_{now.ToShortDateString()}_{now.ToShortTimeString()}", debugSB.ToString());
+         File.WriteAllText($"debug_log_{now.ToShortDateString().Replace('/','-')}_{now.ToShortTimeString().Replace(':','!')}_{now.Second}.txt", debugSB.ToString());
          //close model
          DAZScraperModel.OnApplicationQuit();
       }
@@ -221,7 +222,7 @@ namespace DAZProductScraper
          clearDatabaseButton.Enabled = true;
          createKeywordFolderButton.Enabled = true;
          editKeywordFolderButton.Enabled = true;
-         //refreshKeywordFoldersButton.Enabled = true; //not yet implemented
+         refreshKeywordFoldersButton.Enabled = true; 
          deleteKeywordFolderButton.Enabled = true;
       }
 
@@ -292,7 +293,7 @@ namespace DAZProductScraper
       private void createKeywordFolderButton_Click(object sender, EventArgs e)
       {
          LockManipulators();
-         var pp = new CreateFolderPopup(DAZScraperModel.Config.GetLibrarySaveDirectory(), DAZScraperModel.Config.GetSortingSaveDirectory());
+         var pp = new CreateFolderPopup();
          pp.ShowDialog();
          pp.Dispose();
          UnlockManipulators();
@@ -306,7 +307,7 @@ namespace DAZProductScraper
          op.Dispose();
          if (op.OpenPath != null)
          {
-            var cp = new CreateFolderPopup(DAZScraperModel.Config.GetLibrarySaveDirectory(), DAZScraperModel.Config.GetSortingSaveDirectory(), op.OpenPath.Substring(op.OpenPath.LastIndexOf('\\') + 1));
+            var cp = new CreateFolderPopup(DAZScraperModel.Config.GetSortingFolderNameByPath(op.OpenPath));//op.OpenPath.Substring(op.OpenPath.LastIndexOf('\\') + 1));
             cp.ShowDialog();
             cp.Dispose();
          }
@@ -321,11 +322,27 @@ namespace DAZProductScraper
          op.Dispose();
          if (op.OpenPath != null)
          {
-            if (Directory.Exists(op.OpenPath))
-               Directory.Delete(op.OpenPath, true);
-            File.Delete(op.OpenPath + ".txt");
+            DAZScraperModel.Config.DeleteSortingFolder(DAZScraperModel.Config.GetSortingFolderNameByPath(op.OpenPath));
          }
          UnlockManipulators();
+      }
+
+      private void refreshKeywordFoldersButton_Click(object sender, EventArgs e)
+      {
+         List<string> errors = new List<string>();
+         foreach (string name in DAZScraperModel.Config.GetSortingFolderNames())
+         {
+            string res = DAZScraperModel.AttemptCreateSortingFolder(DAZScraperModel.Config.GetSortingFolderNameByPath(name), 
+               File.ReadAllText(DAZScraperModel.Config.GetSortingFolderTextByName(name)), true);
+            if (res != null)
+            {
+               errors.Add($"{name}: {res}");
+            }
+         }
+         if (errors.Count != 0)
+         {
+            MessageBox.Show(this, "Error", $"The following sorting folders had these corresponding errors upon refreshing: {string.Join("\n", errors)}", MessageBoxButtons.OK, MessageBoxIcon.Error);
+         }
       }
    }
 }

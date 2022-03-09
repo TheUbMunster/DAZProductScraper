@@ -80,6 +80,7 @@ namespace DAZProductScraper
          if (clearPrior)
          {
             infoLogRT.Clear();
+            firstPrintOccurred = false;
          }
          else
          {

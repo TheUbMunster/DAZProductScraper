@@ -173,7 +173,6 @@ namespace DAZProductScraper
          // refreshKeywordFoldersButton
          // 
          this.refreshKeywordFoldersButton.Dock = System.Windows.Forms.DockStyle.Fill;
-         this.refreshKeywordFoldersButton.Enabled = false;
          this.refreshKeywordFoldersButton.Font = new System.Drawing.Font("Microsoft Sans Serif", 12F);
          this.refreshKeywordFoldersButton.Location = new System.Drawing.Point(3, 71);
          this.refreshKeywordFoldersButton.Name = "refreshKeywordFoldersButton";
@@ -181,6 +180,7 @@ namespace DAZProductScraper
          this.refreshKeywordFoldersButton.TabIndex = 4;
          this.refreshKeywordFoldersButton.Text = "Refresh All Keyword Folders";
          this.refreshKeywordFoldersButton.UseVisualStyleBackColor = true;
+         this.refreshKeywordFoldersButton.Click += new System.EventHandler(this.refreshKeywordFoldersButton_Click);
          // 
          // deleteKeywordFolderButton
          // 

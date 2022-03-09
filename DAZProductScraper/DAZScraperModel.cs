@@ -14,6 +14,7 @@ using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 using System.IO;
+using System.Text;
 
 public static class DAZScraperModel
 {
@@ -56,8 +57,8 @@ public static class DAZScraperModel
       }
 
       private const string RootSaveDirectory = "DAZProductScraper_Data";
-      private const string LibrarySaveDirectory = "Data_Library";
-      private const string SortingSaveDirectory = "Sorted_Library";
+      private const string LibrarySaveSubdirectory = "Data_Library";
+      private const string SortingSaveSubdirectory = "Sorted_Library";
 
       public ThumbnailResolution Resolution { get; set; } = ThumbnailResolution.R1080p;
       public int JpgQuality { get; set; } = 75;
@@ -104,12 +105,47 @@ public static class DAZScraperModel
 
       public static string GetLibrarySaveDirectory()
       {
-         return Path.GetFullPath(RootSaveDirectory + "\\" + LibrarySaveDirectory);
+         return Path.Combine(GetRootFolderPath(), LibrarySaveSubdirectory);
       }
 
       public static string GetSortingSaveDirectory()
       {
-         return Path.GetFullPath(RootSaveDirectory + "\\" + SortingSaveDirectory);
+         return Path.Combine(GetRootFolderPath(), SortingSaveSubdirectory);
+      }
+
+      public static IEnumerable<string> GetSortingFoldersPaths()
+      {
+         return Directory.EnumerateDirectories(GetSortingSaveDirectory());
+      }
+
+      public static IEnumerable<string> GetSortingFolderNames()
+      {
+         return Directory.EnumerateDirectories(GetSortingSaveDirectory()).Select(x => x.Substring(x.LastIndexOf('\\') + 1));
+      }
+
+      public static string GetSortingFolderPathByName(string name)
+      {
+         return Path.Combine(GetSortingSaveDirectory(), name);
+      }
+
+      public static string GetSortingFolderNameByPath(string path)
+      {
+         return path.Substring(path.LastIndexOf('\\') + 1);
+      }
+
+      public static string GetSortingFolderTextByName(string name)
+      {
+         return GetSortingFolderPathByName(name) + ".txt";
+      }
+
+      public static void DeleteSortingFolder(string name)
+      {
+         string path = GetSortingFolderPathByName(name);
+         if (Directory.Exists(path))
+            Directory.Delete(path, true);
+         string txt = GetSortingFolderTextByName(name);
+         if (File.Exists(txt))
+            File.Delete(txt);
       }
       #endregion
    }
@@ -173,6 +209,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
             //if the above substring doesn't work, ignore the child of the above select single node with classes "data data_for_notes"
 
             productDescription = WebUtility.HtmlDecode(productDescription);
+            productDescription = productName + "\n" + productPageURL + "\n\n" + productDescription;
             if (imageUrls != null)
             {
                base64Image = null; //we don't need this anymore. (however, maybe use this as a fallback?)
@@ -226,77 +263,15 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
 
    public static string email, pass;
 
-   #region Old
-   //public static void Start()
-   //{
-   //   //Test();
-   //   System.IO.Directory.CreateDirectory(FetchConfig.GetRootFilePath());
-   //   ChangeState(State.LoadingBrowser);
-   //}
-
-#if DEBUG
-   //public static async void Test()
-   //{
-   //   System.IO.Directory.CreateDirectory(fetchConfig.RootSaveDirectory);
-   //   ProductInfoFetch pif = new ProductInfoFetch("49035");
-   //   await pif.FetchData();
-   //   await ImageProcessor.GenerateImage(pif.imageUrls, pif.cleanedProductName, 2, 32, 100);
-   //}
-#endif
-
-   //public static void TryLogin()
-   //{
-   //   if (currentState == State.LoginLoaded)
-   //   {
-   //      ChangeState(State.LoggingIn);
-   //   }
-   //}
-
-   //private static void ChangeState(State newState)
-   //{
-   //   currentState = newState;
-   //   switch (newState)
-   //   {
-   //      case State.Undefined:
-   //         throw new InvalidOperationException();
-   //      case State.LoadingBrowser:
-   //         InitializeBrowser(() => ChangeState(State.BrowserLoaded));
-   //         break;
-   //      case State.BrowserLoaded:
-   //         ChangeState(State.LoadingLogin);
-   //         break;
-   //      case State.LoadingLogin:
-   //         NavigateToLogin(() => ChangeState(State.LoginLoaded));
-   //         break;
-   //      case State.LoginLoaded:
-   //         //waiting
-   //         break;
-   //      case State.LoggingIn:
-   //         Login(email, pass, () => ChangeState(State.LoggedIn));
-   //         break;
-   //      case State.LoggedIn:
-   //         ChangeState(State.LoadingProductPage);
-   //         break;
-   //      case State.LoadingProductPage:
-   //         GoToProductsPage(() => ChangeState(State.ProductPageLoaded));
-   //         break;
-   //      case State.ProductPageLoaded:
-   //         GetProductsIds((List<string> l) =>
-   //         {
-   //            Console.WriteLine("Product Id's fetched");
-   //            GenerateData(l, () => Console.WriteLine("Done!!!"));
-   //         });
-   //         break;
-   //      default:
-   //         throw new InvalidOperationException();
-   //   }
-   //}
-   #endregion
-
-   public static async Task InitBrowser()
+   public static void Initialize(Browser browser)
    {
-      await InitializeBrowser();
+      DAZScraperModel.browser = browser;
    }
+
+   //public static async Task InitBrowser()
+   //{
+   //   await InitializeBrowser();
+   //}
 
    public static async Task GoToLogin(bool newPage = true)
    {
@@ -327,24 +302,24 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    /// Starts up a browser instance and assigns the browser field to the new browser.
    /// </summary>
    /// <param name="completionCallback">Called when the browser has been started</param>
-   private static async Task InitializeBrowser()
-   {
-      BrowserFetcher browserFetch = Puppeteer.CreateBrowserFetcher(new BrowserFetcherOptions() { });
-      RevisionInfo revInfo = await browserFetch.DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
-      browser = await Puppeteer.LaunchAsync(new LaunchOptions
-      {
-         Headless =
-#if DEBUG
-         false
-#else
-         true
-#endif
-         ,
-         ExecutablePath = revInfo.ExecutablePath,
-         Timeout = 5000,
-      });
-      LogInfo?.Invoke("Launched browser", 5, false);
-   }
+//   private static async Task InitializeBrowser()
+//   {
+//      BrowserFetcher browserFetch = Puppeteer.CreateBrowserFetcher(new BrowserFetcherOptions() { });
+//      RevisionInfo revInfo = await browserFetch.DownloadAsync(BrowserFetcher.DefaultChromiumRevision);
+//      browser = await Puppeteer.LaunchAsync(new LaunchOptions
+//      {
+//         Headless =
+//#if DEBUG
+//         false
+//#else
+//         true
+//#endif
+//         ,
+//         ExecutablePath = revInfo.ExecutablePath,
+//         Timeout = 5000,
+//      });
+//      LogInfo?.Invoke("Launched browser", 5, false);
+//   }
 
    /// <summary>
    /// Adds a new page to the browser and sends it to the daz login page.
@@ -436,7 +411,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
    private static async Task GenerateData(List<string> ids, bool overwriteExisting = true)
    {
       LogInfo?.Invoke("Generating/fetching description and image data", 1, true);
-      //to make this faster, sort it in a way and write a comparison for a binary search
+      //to make this faster, sort it in a way and write a comparison for a binary search (on pid)
       List<string> existingFiles = new List<string>(Directory.EnumerateFiles(Config.GetLibrarySaveDirectory()));
       //ids = new List<string>
       //{
@@ -453,6 +428,7 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
          List<Task> fetches = new List<Task>();
          const int amountPerSlam = 200;
          LogInfo?.Invoke($"Total number of products: {ids.Count}", 5, false);
+         //change this so that amountPerSlam only cares about products that were actually fetched (only applies when updating db, not overwriting).
          for (int i = 0; i < ids.Count; i += amountPerSlam)
          {
             if (i != 0)
@@ -527,6 +503,77 @@ contains(concat(' ', normalize-space(@class), ' '), ' box-additional ')]")?.Inne
          await Task.WhenAll(fetches);
          fetches.ForEach(x => x.Dispose());
       }
+   }
+
+   public static string AttemptCreateSortingFolder(string name, string @params, bool overwriteIfExists = false)
+   {
+      if (string.IsNullOrWhiteSpace(@params))
+      {
+         return "You must have at least one parameter";
+      }
+      if (Directory.Exists(Config.GetSortingFolderPathByName(name)) && !overwriteIfExists)
+      {
+         //deny, that name already exists.
+         return "A sorting keyword folder already exists with that name";
+      }
+      Regex validityRegex = new Regex("-\"(.+?)(?<!\\\\)\"");
+      IEnumerable<string> args = validityRegex.Matches(@params).Cast<Match>().Select(x => x.Value.Trim());
+      bool valid = true;
+      foreach (string s in args)
+      {
+         valid &= validityRegex.IsMatch(s);
+      }
+      if (!valid)
+      {
+         //reject because the string isn't right
+         return "The provided parameters were not parseable";
+      }
+      StringBuilder pattern = new StringBuilder();
+      foreach (string s in args)
+      {
+         pattern.Append($"({validityRegex.Match(s).Groups[1].Value})|");
+      }
+      pattern.Remove(pattern.Length - 1, 1); //remove last pipe
+      Regex reg;
+      try
+      {
+         reg = new Regex(pattern.ToString());
+      }
+      catch (ArgumentException e)
+      {
+         //reject because full regex is broken (this means some part of the regex isn't valid)
+         //keep track of the regexes and what line they're on and report what line wasn't parseable
+         return "The generated regular expression was not valid";
+      }
+      //foreach text file that matches the regex, add a shortcut to that pid's images
+      HashSet<string> pidsToAdd = new HashSet<string>();
+      Regex getPidFromFilename = new Regex(".+_(\\d+)\\.txt");
+      foreach (string f in Directory.EnumerateFiles(Config.GetLibrarySaveDirectory(), "*.txt"))
+      {
+         if (reg.IsMatch(System.IO.File.ReadAllText(f)))
+         {
+            pidsToAdd.Add(getPidFromFilename.Match(f).Groups[1].Value);
+         }
+      }
+      if (Directory.Exists(Config.GetSortingFolderPathByName(name)))
+         Directory.Delete(Config.GetSortingFolderPathByName(name), true);
+      Directory.CreateDirectory(Config.GetSortingFolderPathByName(name));
+      Regex getImageFilename = new Regex(".+\\\\(.+_)(\\d+)(-\\d+)\\.jpg");
+      foreach (string f in Directory.EnumerateFiles(Config.GetLibrarySaveDirectory(), "*.jpg")) //"*_[pid]-*.jpg"
+      {
+         Match m = getImageFilename.Match(f);
+         if (pidsToAdd.Contains(m.Groups[2].Value))
+         {
+            //shortcut this image.
+            IWshRuntimeLibrary.WshShell shell = new IWshRuntimeLibrary.WshShell();
+            IWshRuntimeLibrary.IWshShortcut shortcut = (IWshRuntimeLibrary.IWshShortcut)shell.CreateShortcut($"{Config.GetSortingFolderPathByName(name)}\\{m.Groups[1].Value + m.Groups[2].Value + m.Groups[3].Value}.lnk");
+
+            shortcut.TargetPath = f;
+            shortcut.Save();
+         }
+      }
+      File.WriteAllText($"{Config.GetSortingFolderPathByName(name)}.txt", @params);
+      return null;
    }
 
    public static void OnApplicationQuit()
