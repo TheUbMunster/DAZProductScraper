@@ -27,7 +27,7 @@ namespace DAZProductScraper
             DAZScraperModel.Initialize(browser.Result);
             Application.Run(new DAZScraperGUI()); //TRY CATCH FINALLY CLOSE THE BROWSER HERE????
          }
-         catch (Exception e)
+         catch (Exception)
          {
 
          }
